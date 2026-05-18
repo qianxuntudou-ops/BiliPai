@@ -328,6 +328,22 @@ internal fun resolveTopTabSkinStickerIconSize(showText: Boolean): Dp =
 
 internal fun resolveTopTabSkinPartitionIconSize(): Dp = 32.dp
 
+internal fun resolveTopTabSkinStickerRowHeight(
+    baseRowHeight: Dp,
+    hasSkinStickerIcons: Boolean,
+    showIcon: Boolean,
+    showText: Boolean
+): Dp {
+    return if (hasSkinStickerIcons && showIcon && showText) {
+        baseRowHeight.coerceAtLeast(64.dp)
+    } else {
+        baseRowHeight
+    }
+}
+
+internal fun resolveTopTabSkinStickerItemVerticalPadding(showText: Boolean): Dp =
+    if (showText) 2.dp else 4.dp
+
 internal fun resolveIosTopTabRowHeight(
     isFloatingStyle: Boolean,
     labelMode: Int = com.android.purebilibili.core.store.SettingsManager.TopTabLabelMode.TEXT_ONLY
@@ -573,7 +589,7 @@ private fun LightweightHomeTopTabs(
     val showIcon = shouldShowTopTabIcon(normalizedLabelMode)
     val showText = shouldShowTopTabText(normalizedLabelMode)
     val effectiveRenderer = if (skinPlainStyle) HomeTopTabRenderer.MD3 else renderer
-    val rowHeight = if (skinPlainStyle) {
+    val baseRowHeight = if (skinPlainStyle) {
         resolveHomeSkinTopTabRowHeight()
     } else when (effectiveRenderer) {
         HomeTopTabRenderer.IOS -> resolveIosTopTabRowHeight(isFloatingStyle, normalizedLabelMode)
@@ -587,6 +603,13 @@ private fun LightweightHomeTopTabs(
             labelMode = normalizedLabelMode
         ).rowHeight
     }
+    val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()
+    val rowHeight = resolveTopTabSkinStickerRowHeight(
+        baseRowHeight = baseRowHeight,
+        hasSkinStickerIcons = hasSkinStickerIcons,
+        showIcon = showIcon,
+        showText = showText
+    )
     val actionButtonSize = if (skinPlainStyle) {
         resolveHomeSkinTopTabActionButtonSize()
     } else when (effectiveRenderer) {
@@ -720,6 +743,7 @@ private fun LightweightHomeTopTabs(
                             skinPlainStyle = skinPlainStyle,
                             skinPlainContentColor = skinPlainContentColor,
                             skinIconPaths = topTabSkinIconPaths[categoryKey.trim().uppercase()],
+                            hasSkinStickerIcon = hasSkinStickerIcons,
                             onClick = {
                                 performHomeTopBarTap(haptic = haptic, onClick = {
                                     when (resolveTopTabClickAction(index, selectedIndex)) {
@@ -814,6 +838,7 @@ private fun LightweightTopTabItem(
     skinPlainStyle: Boolean = false,
     skinPlainContentColor: Color? = null,
     skinIconPaths: TopTabSkinIconPaths? = null,
+    hasSkinStickerIcon: Boolean = false,
     onClick: () -> Unit
 ) {
     val uiPreset = LocalUiPreset.current
@@ -865,7 +890,14 @@ private fun LightweightTopTabItem(
         modifier = Modifier
             .width(itemWidth)
             .fillMaxHeight()
-            .padding(horizontal = 3.dp, vertical = 4.dp)
+            .padding(
+                horizontal = 3.dp,
+                vertical = if (hasSkinStickerIcon) {
+                    resolveTopTabSkinStickerItemVerticalPadding(showText = showText)
+                } else {
+                    4.dp
+                }
+            )
             .clip(itemShape)
             .background(containerColor, itemShape)
             .clickable(
