@@ -58,6 +58,45 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
+    fun homeVideoTransition_usesCoverAsPrimaryAnchor() {
+        val policy = resolveVideoSharedTransitionOwnership(
+            sourceRoute = "home",
+            coverSharedEnabled = true,
+            isQuickReturnLimited = false
+        )
+
+        assertTrue(policy.useCoverSharedBounds)
+        assertFalse(policy.useMetadataSharedBounds)
+    }
+
+    @Test
+    fun detailContentReveal_usesLightVisibleMotionForHomeSharedTransition() {
+        val motion = resolveVideoDetailContentRevealMotion(
+            sourceRoute = "home",
+            transitionEnabled = true
+        )
+
+        assertTrue(motion.enabled)
+        assertEquals(40, motion.delayMillis)
+        assertEquals(220, motion.durationMillis)
+        assertEquals(14, motion.slideOffsetDp)
+        assertEquals(0.985f, motion.initialScale, 0.0001f)
+    }
+
+    @Test
+    fun detailContentReveal_disabledWithoutSharedTransition() {
+        val motion = resolveVideoDetailContentRevealMotion(
+            sourceRoute = "home",
+            transitionEnabled = false
+        )
+
+        assertFalse(motion.enabled)
+        assertEquals(0, motion.delayMillis)
+        assertEquals(0, motion.slideOffsetDp)
+        assertEquals(1f, motion.initialScale, 0.0001f)
+    }
+
+    @Test
     fun sharedCoverAspectRatio_defaultsToHomeCardSixteenByTen() {
         assertEquals(1.6f, VIDEO_SHARED_COVER_ASPECT_RATIO, 0.0001f)
     }

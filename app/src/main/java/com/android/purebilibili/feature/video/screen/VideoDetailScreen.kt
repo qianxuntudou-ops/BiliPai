@@ -29,6 +29,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -161,6 +162,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
+import com.android.purebilibili.core.ui.transition.resolveVideoDetailContentRevealMotion
 import com.android.purebilibili.core.ui.rememberAppChevronUpIcon
 import com.android.purebilibili.core.ui.rememberAppCollectionIcon
 import com.android.purebilibili.core.ui.rememberAppDownloadIcon
@@ -731,6 +733,12 @@ fun VideoDetailScreen(
         )
     val motionSpec = remember(transitionEnterDurationMillis) {
         resolveVideoDetailMotionSpec(transitionEnterDurationMillis)
+    }
+    val detailContentRevealMotion = remember(sourceRouteForSharedElement, transitionEnabled) {
+        resolveVideoDetailContentRevealMotion(
+            sourceRoute = sourceRouteForSharedElement,
+            transitionEnabled = transitionEnabled
+        )
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val resumePlaybackSuggestion by viewModel.resumePlaybackSuggestion.collectAsStateWithLifecycle()
@@ -2917,9 +2925,35 @@ fun VideoDetailScreen(
                                         ) {
                                             // [性能优化] 延迟显示下方内容，优先保证进场动画流畅
                                             // 配合 isTransitionFinished 状态
+                                            val detailContentRevealSlideOffsetPx = with(LocalDensity.current) {
+                                                detailContentRevealMotion.slideOffsetDp.dp.roundToPx()
+                                            }
+                                            val detailContentRevealEnter = if (detailContentRevealMotion.enabled) {
+                                                val contentRevealTween = tween<Float>(
+                                                    durationMillis = detailContentRevealMotion.durationMillis,
+                                                    delayMillis = detailContentRevealMotion.delayMillis,
+                                                    easing = FastOutSlowInEasing
+                                                )
+                                                fadeIn(animationSpec = contentRevealTween) +
+                                                    slideInVertically(
+                                                        animationSpec = tween(
+                                                            durationMillis = detailContentRevealMotion.durationMillis,
+                                                            delayMillis = detailContentRevealMotion.delayMillis,
+                                                            easing = FastOutSlowInEasing
+                                                        )
+                                                    ) {
+                                                        detailContentRevealSlideOffsetPx
+                                                    } +
+                                                    scaleIn(
+                                                        animationSpec = contentRevealTween,
+                                                        initialScale = detailContentRevealMotion.initialScale
+                                                    )
+                                            } else {
+                                                fadeIn(tween(motionSpec.contentRevealFadeDurationMillis))
+                                            }
                                             androidx.compose.animation.AnimatedVisibility(
                                                 visible = isTransitionFinished,
-                                                enter = fadeIn(tween(motionSpec.contentRevealFadeDurationMillis))
+                                                enter = detailContentRevealEnter
                                             ) {
                                                 Box(modifier = Modifier.fillMaxSize()) {
                                                     VideoContentSection(

@@ -51,7 +51,6 @@ import com.android.purebilibili.core.util.HapticType
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.core.spring
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.AppShapes
@@ -64,8 +63,8 @@ import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.components.UpBadgeName
 import com.android.purebilibili.core.ui.components.resolveUpStatsText
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
+import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionOwnership
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
-import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
 import com.android.purebilibili.feature.home.resolveHomeCardInfoSurfaceAppearance
 import com.android.purebilibili.feature.home.rememberHomeGlassPillColors
@@ -403,8 +402,13 @@ fun ElegantVideoCard(
         )
         val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
         val homeSharedElementSourceRoute = com.android.purebilibili.navigation.ScreenRoutes.Home.route
+        val sharedTransitionOwnership = resolveVideoSharedTransitionOwnership(
+            sourceRoute = homeSharedElementSourceRoute,
+            coverSharedEnabled = coverSharedEnabled,
+            isQuickReturnLimited = isQuickReturnLimited
+        )
         val connectedCardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
-        val baseCardContainerModifier = if (infoSurfaceAppearance.useTintedSurface) {
+        val cardContainerModifier = if (infoSurfaceAppearance.useTintedSurface) {
             Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -417,34 +421,10 @@ fun ElegantVideoCard(
         } else {
             Modifier.fillMaxWidth()
         }
-        val cardContainerSharedModifier = if (coverSharedEnabled) {
-            with(requireNotNull(sharedTransitionScope)) {
-                Modifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey(
-                            video.bvid,
-                            sourceRoute = homeSharedElementSourceRoute
-                        )
-                    ),
-                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                    boundsTransform = { _, _ ->
-                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
-                    },
-                    clipInOverlayDuringTransition = OverlayClip(connectedCardShape)
-                )
-            }
-        } else {
-            Modifier
-        }
-        val cardContainerModifier = baseCardContainerModifier.then(cardContainerSharedModifier)
         Column(
             modifier = cardContainerModifier
         ) {
-            val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
-                coverSharedEnabled = coverSharedEnabled,
-                isQuickReturnLimited = isQuickReturnLimited,
-                useCardContainerSharedBounds = coverSharedEnabled
-            )
+            val metadataSharedEnabled = sharedTransitionOwnership.useMetadataSharedBounds
         
         //  [性能优化] 封面圆角形状缓存（避免重组时重复创建）
         val coverShape = remember(cardCornerRadius, infoSurfaceAppearance.useTintedSurface) {
@@ -460,8 +440,28 @@ fun ElegantVideoCard(
             }
         }
 
+        val coverModifier = if (sharedTransitionOwnership.useCoverSharedBounds) {
+            with(requireNotNull(sharedTransitionScope)) {
+                Modifier.sharedBounds(
+                    sharedContentState = rememberSharedContentState(
+                        key = com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey(
+                            video.bvid,
+                            sourceRoute = homeSharedElementSourceRoute
+                        )
+                    ),
+                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                    boundsTransform = { _, _ ->
+                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                    },
+                    clipInOverlayDuringTransition = OverlayClip(coverShape)
+                )
+            }
+        } else {
+            Modifier
+        }
+
         Box(
-            modifier = Modifier
+            modifier = coverModifier
                 .fillMaxWidth()
                 .aspectRatio(VIDEO_SHARED_COVER_ASPECT_RATIO)
                 // [性能优化] 使用 shadow(clip = true) 合并裁剪和阴影层，避免创建额外的 GraphicsLayer
