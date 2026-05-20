@@ -49,6 +49,7 @@ class AppNavigationNavigation3BridgeStructureTest {
         assertTrue(source.contains("BiliPaiNavEntryContentRole.DYNAMIC ->"))
         assertTrue(source.contains("BiliPaiNavEntryContentRole.SEARCH ->"))
         assertTrue(source.contains("BiliPaiNavEntryContentRole.PROFILE ->"))
+        assertTrue(source.contains("BiliPaiNavEntryContentRole.VIDEO_DETAIL ->"))
         assertTrue(source.contains("BiliPaiNavEntryContentRole.HISTORY ->"))
         assertTrue(source.contains("BiliPaiNavEntryContentRole.SETTINGS ->"))
         assertTrue(source.contains("BiliPaiNavEntryContentRole.WATCH_LATER ->"))

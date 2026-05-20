@@ -130,7 +130,6 @@ import com.android.purebilibili.core.ui.performance.TrackJankStateValue
 import com.android.purebilibili.core.ui.blur.unifiedBlur
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.util.FormatUtils
-import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.core.util.HapticType
 import com.android.purebilibili.core.util.Logger
 import com.android.purebilibili.core.util.rememberHapticFeedback
@@ -422,6 +421,7 @@ fun VideoPlayerSection(
     onPageSelect: (Int) -> Unit = {},
     forceCoverOnly: Boolean = false,
     allowLivePlayerSharedElement: Boolean = true,
+    sourceRouteForSharedElement: String? = null,
     suppressSubtitleOverlay: Boolean = false,
     subtitleDisplayModePreferenceOverride: SubtitleDisplayMode? = null,
     onSubtitleDisplayModePreferenceOverrideChange: (SubtitleDisplayMode) -> Unit = {},
@@ -2500,10 +2500,10 @@ fun VideoPlayerSection(
         transitionEnabled = transitionEnabled,
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null,
-        sourceRoute = CardPositionManager.lastVideoSourceRoute
+        sourceRoute = sourceRouteForSharedElement
     )
     val forcedReturnCoverSharedElementSourceRoute = resolveForcedReturnCoverSharedElementSourceRoute(
-        CardPositionManager.lastVideoSourceRoute
+        sourceRouteForSharedElement
     )
     
     // [Debug] Logging

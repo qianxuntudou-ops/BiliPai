@@ -18,11 +18,15 @@ class BiliPaiNavEntryContentPolicyTest {
     }
 
     @Test
-    fun detailKeysRemainDeferredUntilTheirLegacyRouteBodiesAreExtracted() {
+    fun videoDetailKeyResolvesToDedicatedContentRole() {
         assertEquals(
-            BiliPaiNavEntryContentRole.DEFERRED_LEGACY_ROUTE,
+            BiliPaiNavEntryContentRole.VIDEO_DETAIL,
             resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.VideoDetail("BV1"))
         )
+    }
+
+    @Test
+    fun remainingDetailKeysStayDeferredUntilTheirLegacyRouteBodiesAreExtracted() {
         assertEquals(
             BiliPaiNavEntryContentRole.DEFERRED_LEGACY_ROUTE,
             resolveBiliPaiNavEntryContentRole(BiliPaiNavKey.ArticleDetail(articleId = 1L))

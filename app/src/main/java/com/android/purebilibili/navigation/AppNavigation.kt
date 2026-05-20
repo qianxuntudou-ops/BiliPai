@@ -24,6 +24,7 @@ import androidx.compose.runtime.LaunchedEffect // 新增
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -1473,6 +1474,114 @@ fun AppNavigation(
                                 deferImmersiveRenderBudget = bottomPagerRenderBudget.deferProfileImmersiveBackground
                             )
                         }
+                        BiliPaiNavEntryContentRole.VIDEO_DETAIL -> {
+                            val videoKey = key as BiliPaiNavKey.VideoDetail
+                            val activity = context as? android.app.Activity
+                            var isNavigatingToAudioMode by remember(videoKey.bvid) { mutableStateOf(false) }
+                            val latestNavTopIsVideo by rememberUpdatedState(
+                                navigation3BackStack.lastOrNull() is BiliPaiNavKey.VideoDetail
+                            )
+
+                            DisposableEffect(videoKey.bvid) {
+                                miniPlayerManager?.isNavigatingToVideo = false
+                                miniPlayerManager?.resetNavigationFlag()
+                                onVideoDetailEnter()
+                                onDispose {
+                                    val stillInVideoRoute = latestNavTopIsVideo
+
+                                    if (!stillInVideoRoute) {
+                                        onVideoDetailExit()
+                                    } else {
+                                        com.android.purebilibili.core.util.Logger.d(
+                                            "AppNavigation",
+                                            "Skip onVideoDetailExit because Navigation3 destination is still video"
+                                        )
+                                    }
+
+                                    if (shouldClearReturningStateWhenDisposingVideoDestination(stillInVideoRoute)) {
+                                        navigation3ReturnSession = navigation3ReturnSession.clearReturning()
+                                        CardPositionManager.clearReturning()
+                                    }
+
+                                    if (
+                                        !stillInVideoRoute &&
+                                        activity?.isChangingConfigurations != true &&
+                                        !isNavigatingToAudioMode
+                                    ) {
+                                        miniPlayerManager?.markLeavingByNavigation(expectedBvid = videoKey.bvid)
+                                        if (miniPlayerManager?.shouldShowInAppMiniPlayer() == true) {
+                                            miniPlayerManager.enterMiniMode()
+                                        }
+                                    }
+                                }
+                            }
+
+                            VideoDetailScreen(
+                                bvid = videoKey.bvid,
+                                coverUrl = videoKey.coverUrl,
+                                cid = videoKey.cid,
+                                onUpClick = { mid -> pushNavigation3Route(ScreenRoutes.Space.createRoute(mid)) },
+                                miniPlayerManager = miniPlayerManager,
+                                isInPipMode = isInPipMode,
+                                isVisible = true,
+                                startInFullscreen = videoKey.fullscreen,
+                                startAudioFromRoute = videoKey.startAudio,
+                                autoEnterPortraitFromRoute = videoKey.autoPortrait,
+                                resumePositionMsFromRoute = videoKey.resumePositionMs,
+                                openCommentRootRpidFromRoute = videoKey.commentRootRpid,
+                                sourceRouteForSharedElement = videoKey.sourceRoute,
+                                transitionEnabled = shouldEnableVideoDetailSharedTransition(
+                                    cardTransitionEnabled = cardTransitionEnabled,
+                                    predictiveBackAnimationEnabled = predictiveBackAnimationEnabled
+                                ),
+                                predictiveBackAnimationEnabled = predictiveBackAnimationEnabled,
+                                transitionEnterDurationMillis = navMotionSpec.slowFadeDurationMillis,
+                                transitionMaxBlurRadiusPx = navMotionSpec.maxBackdropBlurRadius,
+                                onBack = {
+                                    navigation3ReturnSession =
+                                        navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
+                                    CardPositionManager.markReturning()
+                                    miniPlayerManager?.markLeavingByNavigation(expectedBvid = videoKey.bvid)
+                                    navigation3BackStack = popBiliPaiNavKey(navigation3BackStack)
+                                },
+                                onHomeClick = {
+                                    navigation3ReturnSession =
+                                        navigation3ReturnSession.markReturning(SystemClock.uptimeMillis())
+                                    CardPositionManager.markReturning()
+                                    miniPlayerManager?.markLeavingByNavigation(expectedBvid = videoKey.bvid)
+                                    pushNavigation3Key(BiliPaiNavKey.Home)
+                                },
+                                onNavigateToAudioMode = {
+                                    isNavigatingToAudioMode = true
+                                    pushNavigation3Key(BiliPaiNavKey.AudioMode)
+                                },
+                                onNavigateToSearch = { pushNavigation3Key(BiliPaiNavKey.Search) },
+                                onSearchKeywordClick = submitSearchKeywordInNavigation3,
+                                onOpenBilibiliLink = ::openBilibiliLink,
+                                onVideoClick = { vid, options ->
+                                    val targetCid = options?.getLong(
+                                        com.android.purebilibili.feature.video.screen.VIDEO_NAV_TARGET_CID_KEY
+                                    ) ?: 0L
+                                    navigateToVideoInNavigation3(vid, targetCid, "")
+                                },
+                                onBgmClick = { bgm ->
+                                    if (bgm.jumpUrl.isNotEmpty()) {
+                                        pushNavigation3Route(ScreenRoutes.Web.createRoute(bgm.jumpUrl, "发现音乐"))
+                                        return@VideoDetailScreen
+                                    }
+
+                                    val auSid = bgm.musicId.removePrefix("au").toLongOrNull()
+                                    if (auSid != null) {
+                                        pushNavigation3Route(ScreenRoutes.MusicDetail.createRoute(auSid))
+                                    } else if (bgm.musicId.startsWith("MA") && videoKey.cid > 0) {
+                                        val title = bgm.musicTitle.ifEmpty { "背景音乐" }
+                                        pushNavigation3Route(
+                                            ScreenRoutes.NativeMusic.createRoute(title, videoKey.bvid, videoKey.cid)
+                                        )
+                                    }
+                                }
+                            )
+                        }
                         BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(
                                 onBack = { performSystemBackAction() },
                                 onOpenSourceLicensesClick = { pushNavigation3Route(ScreenRoutes.OpenSourceLicenses.route) },
@@ -2321,6 +2430,7 @@ fun AppNavigation(
                     autoEnterPortraitFromRoute = autoPortraitFromRoute,
                     resumePositionMsFromRoute = resumePositionMsFromRoute,
                     openCommentRootRpidFromRoute = commentRootRpidFromRoute,
+                    sourceRouteForSharedElement = navigation3ReturnSession.lastVideoSourceRoute,
                     transitionEnabled = shouldEnableVideoDetailSharedTransition(
                         cardTransitionEnabled = cardTransitionEnabled,
                         predictiveBackAnimationEnabled = predictiveBackAnimationEnabled

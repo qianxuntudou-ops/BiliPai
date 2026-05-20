@@ -6,6 +6,7 @@ internal enum class BiliPaiNavEntryContentRole {
     SEARCH,
     SETTINGS,
     PROFILE,
+    VIDEO_DETAIL,
     HISTORY,
     FAVORITE,
     WATCH_LATER,
@@ -19,6 +20,7 @@ internal fun resolveBiliPaiNavEntryContentRole(key: BiliPaiNavKey): BiliPaiNavEn
         BiliPaiNavKey.Search -> BiliPaiNavEntryContentRole.SEARCH
         BiliPaiNavKey.Settings -> BiliPaiNavEntryContentRole.SETTINGS
         BiliPaiNavKey.Profile -> BiliPaiNavEntryContentRole.PROFILE
+        is BiliPaiNavKey.VideoDetail -> BiliPaiNavEntryContentRole.VIDEO_DETAIL
         BiliPaiNavKey.History -> BiliPaiNavEntryContentRole.HISTORY
         BiliPaiNavKey.Favorite -> BiliPaiNavEntryContentRole.FAVORITE
         BiliPaiNavKey.WatchLater -> BiliPaiNavEntryContentRole.WATCH_LATER

@@ -605,6 +605,7 @@ private fun PortraitInlineVideoPlayerHost(
     onNavigateToAudioMode: () -> Unit,
     forceCoverOnly: Boolean,
     allowLivePlayerSharedElement: Boolean,
+    sourceRouteForSharedElement: String?,
     suppressSubtitleOverlay: Boolean,
     subtitleDisplayModePreferenceOverride: SubtitleDisplayMode?,
     onSubtitleDisplayModePreferenceOverrideChange: (SubtitleDisplayMode) -> Unit
@@ -671,6 +672,7 @@ private fun PortraitInlineVideoPlayerHost(
             onDownloadAudio = { viewModel.downloadAudio(context) },
             forceCoverOnly = forceCoverOnly,
             allowLivePlayerSharedElement = allowLivePlayerSharedElement,
+            sourceRouteForSharedElement = sourceRouteForSharedElement,
             suppressSubtitleOverlay = suppressSubtitleOverlay,
             subtitleDisplayModePreferenceOverride = subtitleDisplayModePreferenceOverride,
             onSubtitleDisplayModePreferenceOverrideChange = onSubtitleDisplayModePreferenceOverrideChange
@@ -691,6 +693,7 @@ fun VideoDetailScreen(
     autoEnterPortraitFromRoute: Boolean = false,
     resumePositionMsFromRoute: Long = 0L,
     openCommentRootRpidFromRoute: Long = 0L,
+    sourceRouteForSharedElement: String? = null,
     transitionEnabled: Boolean = false,
     predictiveBackAnimationEnabled: Boolean = true,
     transitionEnterDurationMillis: Int = 320,
@@ -2451,6 +2454,7 @@ fun VideoDetailScreen(
                 onPageSelect = { viewModel.switchPage(it) },
                 forceCoverOnly = forceCoverOnlyForReturn,
                 allowLivePlayerSharedElement = true,
+                sourceRouteForSharedElement = sourceRouteForSharedElement,
                 suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,
                 subtitleDisplayModePreferenceOverride = subtitleDisplayModeOverride,
                 onSubtitleDisplayModePreferenceOverrideChange = { subtitleDisplayModeOverride = it }
@@ -2822,6 +2826,7 @@ fun VideoDetailScreen(
                             },
                             forceCoverOnly = forceCoverOnlyForReturn,
                             allowLivePlayerSharedElement = true,
+                            sourceRouteForSharedElement = sourceRouteForSharedElement,
                             suppressSubtitleOverlay = shouldSuppressSubtitleOverlay,
                             subtitleDisplayModePreferenceOverride = subtitleDisplayModeOverride,
                             onSubtitleDisplayModePreferenceOverrideChange = { subtitleDisplayModeOverride = it }
