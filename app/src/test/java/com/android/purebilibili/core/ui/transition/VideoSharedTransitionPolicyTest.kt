@@ -47,6 +47,17 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
+    fun metadataSharedTransition_disabledWhenCardContainerOwnsSharedBounds() {
+        assertFalse(
+            shouldEnableVideoMetadataSharedTransition(
+                coverSharedEnabled = true,
+                isQuickReturnLimited = false,
+                useCardContainerSharedBounds = true
+            )
+        )
+    }
+
+    @Test
     fun sharedCoverAspectRatio_defaultsToHomeCardSixteenByTen() {
         assertEquals(1.6f, VIDEO_SHARED_COVER_ASPECT_RATIO, 0.0001f)
     }

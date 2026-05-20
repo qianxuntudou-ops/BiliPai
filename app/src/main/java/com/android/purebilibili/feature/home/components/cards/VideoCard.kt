@@ -393,8 +393,18 @@ fun ElegantVideoCard(
             }
             .padding(bottom = 12.dp)
     ) {
+        //  尝试获取共享元素作用域。首页点击视频时，由卡片主容器承载整体放大/回收。
+        val sharedTransitionScope = LocalSharedTransitionScope.current
+        val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+        val coverSharedEnabled = shouldEnableVideoCoverSharedTransition(
+            transitionEnabled = transitionEnabled,
+            hasSharedTransitionScope = sharedTransitionScope != null,
+            hasAnimatedVisibilityScope = animatedVisibilityScope != null
+        )
+        val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
+        val homeSharedElementSourceRoute = com.android.purebilibili.navigation.ScreenRoutes.Home.route
         val connectedCardShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
-        val cardContainerModifier = if (infoSurfaceAppearance.useTintedSurface) {
+        val baseCardContainerModifier = if (infoSurfaceAppearance.useTintedSurface) {
             Modifier
                 .fillMaxWidth()
                 .shadow(
@@ -407,48 +417,34 @@ fun ElegantVideoCard(
         } else {
             Modifier.fillMaxWidth()
         }
-        Column(
-            modifier = cardContainerModifier
-        ) {
-        //  尝试获取共享元素作用域
-        val sharedTransitionScope = LocalSharedTransitionScope.current
-        val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
-        val coverSharedEnabled = shouldEnableVideoCoverSharedTransition(
-            transitionEnabled = transitionEnabled,
-            hasSharedTransitionScope = sharedTransitionScope != null,
-            hasAnimatedVisibilityScope = animatedVisibilityScope != null
-        )
-        val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
-        val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
-            coverSharedEnabled = coverSharedEnabled,
-            isQuickReturnLimited = isQuickReturnLimited
-        )
-        val homeSharedElementSourceRoute = com.android.purebilibili.navigation.ScreenRoutes.Home.route
-        
-        //  封面容器 - 官方 B 站风格，支持共享元素过渡（受开关控制）
-        val coverModifier = if (coverSharedEnabled) {
+        val cardContainerSharedModifier = if (coverSharedEnabled) {
             with(requireNotNull(sharedTransitionScope)) {
-                Modifier
-                    .sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey(
-                                video.bvid,
-                                sourceRoute = homeSharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        //  添加回弹效果的 spring 动画
-                        boundsTransform = { _, _ ->
-                            com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
-                        },
-                        clipInOverlayDuringTransition = OverlayClip(
-                            RoundedCornerShape(cardCornerRadius)  //  过渡时保持动态圆角
+                Modifier.sharedBounds(
+                    sharedContentState = rememberSharedContentState(
+                        key = com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey(
+                            video.bvid,
+                            sourceRoute = homeSharedElementSourceRoute
                         )
-                    )
+                    ),
+                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                    boundsTransform = { _, _ ->
+                        com.android.purebilibili.core.theme.AnimationSpecs.BiliPaiSpringSpec
+                    },
+                    clipInOverlayDuringTransition = OverlayClip(connectedCardShape)
+                )
             }
         } else {
             Modifier
         }
+        val cardContainerModifier = baseCardContainerModifier.then(cardContainerSharedModifier)
+        Column(
+            modifier = cardContainerModifier
+        ) {
+            val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
+                coverSharedEnabled = coverSharedEnabled,
+                isQuickReturnLimited = isQuickReturnLimited,
+                useCardContainerSharedBounds = coverSharedEnabled
+            )
         
         //  [性能优化] 封面圆角形状缓存（避免重组时重复创建）
         val coverShape = remember(cardCornerRadius, infoSurfaceAppearance.useTintedSurface) {
@@ -465,7 +461,7 @@ fun ElegantVideoCard(
         }
 
         Box(
-            modifier = coverModifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(VIDEO_SHARED_COVER_ASPECT_RATIO)
                 // [性能优化] 使用 shadow(clip = true) 合并裁剪和阴影层，避免创建额外的 GraphicsLayer

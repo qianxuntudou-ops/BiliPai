@@ -79,17 +79,48 @@ internal fun biliPaiNavEntryMetadata(
     key: BiliPaiNavKey,
     sourceMetadata: BiliPaiNavSourceMetadata
 ): Map<String, Any> {
+    val transitions = resolveBiliPaiNavEntryRouteTransitions(
+        key = key,
+        sourceMetadata = sourceMetadata
+    )
+    return NavDisplay.transitionSpec {
+        resolveBiliPaiNavContentTransform(transitions.forward)
+    } + NavDisplay.popTransitionSpec {
+        resolveBiliPaiNavContentTransform(transitions.pop)
+    } + NavDisplay.predictivePopTransitionSpec {
+        resolveBiliPaiNavContentTransform(transitions.predictivePop)
+    }
+}
+
+internal data class BiliPaiNavEntryRouteTransitions(
+    val forward: BiliPaiNavRouteTransition,
+    val pop: BiliPaiNavRouteTransition,
+    val predictivePop: BiliPaiNavRouteTransition
+)
+
+internal fun resolveBiliPaiNavEntryRouteTransitions(
+    key: BiliPaiNavKey,
+    sourceMetadata: BiliPaiNavSourceMetadata
+): BiliPaiNavEntryRouteTransitions {
+    val sharedReadyVideoPush = key is BiliPaiNavKey.VideoDetail &&
+        sourceMetadata.sharedTransitionReady &&
+        sourceMetadata.sourceRoute != null &&
+        sourceMetadata.sourceRoute == key.sourceRoute &&
+        sourceMetadata.sourceKey == "${sourceMetadata.sourceRoute}:${key.bvid}"
     val noOpReturn = key is BiliPaiNavKey.VideoDetail || sourceMetadata.sharedTransitionReady
-    val transition = if (noOpReturn) {
+    val forward = if (sharedReadyVideoPush) {
         BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
     } else {
         BiliPaiNavRouteTransition.FALLBACK
     }
-    return NavDisplay.transitionSpec {
-        resolveBiliPaiNavContentTransform(BiliPaiNavRouteTransition.FALLBACK)
-    } + NavDisplay.popTransitionSpec {
-        resolveBiliPaiNavContentTransform(transition)
-    } + NavDisplay.predictivePopTransitionSpec {
-        resolveBiliPaiNavContentTransform(transition)
+    val pop = if (noOpReturn) {
+        BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT
+    } else {
+        BiliPaiNavRouteTransition.FALLBACK
     }
+    return BiliPaiNavEntryRouteTransitions(
+        forward = forward,
+        pop = pop,
+        predictivePop = pop
+    )
 }
