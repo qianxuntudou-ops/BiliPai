@@ -122,8 +122,9 @@ import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.store.resolveEffectiveHomeSettings
 import com.android.purebilibili.core.theme.LocalUiPreset
 import com.android.purebilibili.core.util.NetworkUtils
-import com.android.purebilibili.navigation3.BiliPaiNavKey
 import com.android.purebilibili.navigation3.BiliPaiNavDisplayHost
+import com.android.purebilibili.navigation3.BiliPaiNavEntryContentRole
+import com.android.purebilibili.navigation3.BiliPaiNavKey
 import com.android.purebilibili.navigation3.BiliPaiNavRouteTransition
 import com.android.purebilibili.navigation3.BiliPaiReturnSessionState
 import com.android.purebilibili.navigation3.legacyRouteToBiliPaiNavKey
@@ -1125,8 +1126,24 @@ fun AppNavigation(
                         modifier = Modifier.fillMaxSize(),
                         sharedTransitionScope = LocalSharedTransitionScope.current
                     ) { key ->
-                        resolveBiliPaiNavEntryContentRole(key)
-                        Unit
+                        when (resolveBiliPaiNavEntryContentRole(key)) {
+                            BiliPaiNavEntryContentRole.SETTINGS -> SettingsScreen(
+                                onBack = { performSystemBackAction() },
+                                onOpenSourceLicensesClick = { navController.navigate(ScreenRoutes.OpenSourceLicenses.route) },
+                                onAppearanceClick = { navController.navigate(ScreenRoutes.AppearanceSettings.route) },
+                                onAnimationClick = { navController.navigate(ScreenRoutes.AnimationSettings.route) },
+                                onPlaybackClick = { navController.navigate(ScreenRoutes.PlaybackSettings.route) },
+                                onPermissionClick = { navController.navigate(ScreenRoutes.PermissionSettings.route) },
+                                onPluginsClick = { navController.navigate(ScreenRoutes.PluginsSettings.createRoute()) },
+                                onSettingsShareClick = { navController.navigate(ScreenRoutes.SettingsShare.route) },
+                                onWebDavBackupClick = { navController.navigate(ScreenRoutes.WebDavBackup.route) },
+                                onNavigateToBottomBarSettings = { navController.navigate(ScreenRoutes.BottomBarSettings.route) },
+                                onTipsClick = { navController.navigate(ScreenRoutes.TipsSettings.route) },
+                                onReplayOnboardingClick = { navController.navigate(ScreenRoutes.Onboarding.route) },
+                                mainHazeState = mainHazeState
+                            )
+                            else -> Unit
+                        }
                     }
                 } else NavHost(
             navController = navController,
