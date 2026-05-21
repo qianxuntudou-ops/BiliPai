@@ -2,6 +2,7 @@ package com.android.purebilibili.navigation3
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BiliPaiNavDisplayHostStructureTest {
@@ -61,8 +62,19 @@ class BiliPaiNavDisplayHostStructureTest {
 
         assertTrue(source.contains("NavDisplay("))
         assertTrue(source.contains("onBack = onBack"))
-        kotlin.test.assertFalse(source.contains("import androidx.activity.compose.BackHandler"))
-        kotlin.test.assertFalse(source.contains("BackHandler(enabled"))
+        assertFalse(source.contains("import androidx.activity.compose.BackHandler"))
+        assertFalse(source.contains("BackHandler(enabled"))
+    }
+
+    @Test
+    fun navDisplayHostKeepsPredictiveReturnProgressLocalToNavDisplay() {
+        val source = navDisplayHostSource()
+
+        assertTrue(source.contains("LocalVideoPredictiveReturnState provides videoPredictiveReturnState"))
+        assertTrue(source.contains("videoPredictiveReturnToCardEnabled: Boolean"))
+        assertTrue(source.contains("videoPredictiveReturnSourceBounds: Rect?"))
+        assertFalse(source.contains("onPredictiveBackGestureChange"))
+        assertFalse(source.contains("LaunchedEffect(predictiveBackGestureState)"))
     }
 
     private fun navDisplayHostSource(): String {

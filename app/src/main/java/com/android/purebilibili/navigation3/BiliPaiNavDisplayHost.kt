@@ -5,11 +5,11 @@ import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.HasDefaultViewModelProviderFactory
 import androidx.lifecycle.ViewModelProvider
@@ -32,6 +32,8 @@ import androidx.navigationevent.compose.rememberNavigationEventState
 import com.android.purebilibili.core.store.PredictiveBackAnimationStyle
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.LocalVideoPredictiveReturnState
+import com.android.purebilibili.core.ui.transition.VideoPredictiveReturnState
 import kotlinx.coroutines.launch
 
 @Composable
@@ -45,7 +47,8 @@ internal fun BiliPaiNavDisplayHost(
     sharedTransitionScope: SharedTransitionScope? = null,
     visibleBottomBarRoutes: Set<String> = emptySet(),
     suppressPredictiveBackDecorator: Boolean = false,
-    onPredictiveBackGestureChange: (BiliPaiPredictiveBackGestureState) -> Unit = {},
+    videoPredictiveReturnToCardEnabled: Boolean = false,
+    videoPredictiveReturnSourceBounds: Rect? = null,
     content: @Composable (BiliPaiNavKey) -> Unit
 ) {
     val safeBackStack = remember(backStack) {
@@ -134,8 +137,16 @@ internal fun BiliPaiNavDisplayHost(
     val predictiveBackGestureState = resolveBiliPaiPredictiveBackGestureState(
         navigationEventState.transitionState
     )
-    LaunchedEffect(predictiveBackGestureState) {
-        onPredictiveBackGestureChange(predictiveBackGestureState)
+    val videoPredictiveReturnState = remember(
+        videoPredictiveReturnToCardEnabled,
+        videoPredictiveReturnSourceBounds,
+        predictiveBackGestureState
+    ) {
+        VideoPredictiveReturnState(
+            active = videoPredictiveReturnToCardEnabled && predictiveBackGestureState.active,
+            progress = predictiveBackGestureState.progress,
+            sourceBounds = videoPredictiveReturnSourceBounds
+        )
     }
 
     NavigationBackHandler(
@@ -152,29 +163,33 @@ internal fun BiliPaiNavDisplayHost(
         }
     )
 
-    NavDisplay(
-        sceneState = sceneState,
-        navigationEventState = navigationEventState,
-        modifier = modifier,
-        contentAlignment = Alignment.TopStart,
-        sizeTransform = null,
-        transitionSpec = {
-            resolveBiliPaiNavContentTransform(BiliPaiNavRouteTransition.FALLBACK)
-        },
-        popTransitionSpec = {
-            with(predictiveBackMotion) {
-                onPopTransitionSpec()
-            }
-        },
-        predictivePopTransitionSpec = { swipeEdge ->
-            // 预测性返回必须由顶层统一分发，否则普通路由的 entry fallback 会抢走
-            // InstallerX 风格 handler，导致手势过程中只能看到淡入淡出。
-            resolveBiliPaiNavPredictivePopContentTransform(predictivePopRouteTransition)
-                ?: with(predictiveBackMotion) {
-                    onPredictivePopTransitionSpec(swipeEdge)
+    CompositionLocalProvider(
+        LocalVideoPredictiveReturnState provides videoPredictiveReturnState
+    ) {
+        NavDisplay(
+            sceneState = sceneState,
+            navigationEventState = navigationEventState,
+            modifier = modifier,
+            contentAlignment = Alignment.TopStart,
+            sizeTransform = null,
+            transitionSpec = {
+                resolveBiliPaiNavContentTransform(BiliPaiNavRouteTransition.FALLBACK)
+            },
+            popTransitionSpec = {
+                with(predictiveBackMotion) {
+                    onPopTransitionSpec()
                 }
-        },
-    )
+            },
+            predictivePopTransitionSpec = { swipeEdge ->
+                // 预测性返回必须由顶层统一分发，否则普通路由的 entry fallback 会抢走
+                // InstallerX 风格 handler，导致手势过程中只能看到淡入淡出。
+                resolveBiliPaiNavPredictivePopContentTransform(predictivePopRouteTransition)
+                    ?: with(predictiveBackMotion) {
+                        onPredictivePopTransitionSpec(swipeEdge)
+                    }
+            },
+        )
+    }
 
 }
 
