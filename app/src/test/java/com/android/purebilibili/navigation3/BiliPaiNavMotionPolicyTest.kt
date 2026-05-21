@@ -50,6 +50,24 @@ class BiliPaiNavMotionPolicyTest {
     }
 
     @Test
+    fun installerXPredictiveStyles_doNotDependOnCardTransitionSwitch() {
+        listOf(
+            PredictiveBackAnimationStyle.AOSP,
+            PredictiveBackAnimationStyle.MIUIX,
+            PredictiveBackAnimationStyle.SCALE,
+            PredictiveBackAnimationStyle.CLASSIC
+        ).forEach { style ->
+            assertEquals(
+                BiliPaiNavMotionMode.PREDICTIVE_NAV_DISPLAY,
+                resolveBiliPaiNavMotionMode(
+                    predictiveBackAnimationStyle = style,
+                    cardTransitionEnabled = false
+                )
+            )
+        }
+    }
+
+    @Test
     fun sharedElementReady_videoReturn_prefersNoOpRouteLayer() {
         val decision = resolveBiliPaiNavMotionDecision(
             fromKey = BiliPaiNavKey.VideoDetail("BV1"),

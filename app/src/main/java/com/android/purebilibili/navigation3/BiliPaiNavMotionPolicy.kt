@@ -42,11 +42,12 @@ internal fun resolveBiliPaiNavMotionMode(
     predictiveBackAnimationStyle: PredictiveBackAnimationStyle,
     cardTransitionEnabled: Boolean
 ): BiliPaiNavMotionMode {
-    if (!cardTransitionEnabled) return BiliPaiNavMotionMode.CARD_DISABLED
     return if (predictiveBackAnimationStyle.usesPredictiveBack) {
         BiliPaiNavMotionMode.PREDICTIVE_NAV_DISPLAY
-    } else {
+    } else if (cardTransitionEnabled) {
         BiliPaiNavMotionMode.CLASSIC_CARD
+    } else {
+        BiliPaiNavMotionMode.CARD_DISABLED
     }
 }
 
