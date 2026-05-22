@@ -86,8 +86,8 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun returnReboundOnlyRunsForMatchingVisibleSourceCard() {
-        assertTrue(
+    fun returnReboundDisabledEvenForMatchingVisibleSourceCard() {
+        assertFalse(
             shouldPlayVideoCardReturnRebound(
                 cardBvid = "BV1",
                 cardSourceRoute = "history",
@@ -186,13 +186,13 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun returnRebound_usesFastOutSlowFinishCurve() {
+    fun returnReboundSpec_staysDisabledWhenRequested() {
         val rebound = resolveVideoCardReturnReboundSpec(enabled = true)
 
-        assertEquals(0.984f, rebound.startScale, 0.0001f)
-        assertEquals(2.25f, rebound.startTranslationYDp, 0.0001f)
-        assertEquals(0.64f, rebound.dampingRatio, 0.0001f)
-        assertEquals(520f, rebound.stiffness, 0.0001f)
+        assertFalse(rebound.enabled)
+        assertEquals(0, rebound.durationMillis)
+        assertEquals(1f, rebound.startScale, 0.0001f)
+        assertEquals(0f, rebound.startTranslationYDp, 0.0001f)
     }
 
     @Test

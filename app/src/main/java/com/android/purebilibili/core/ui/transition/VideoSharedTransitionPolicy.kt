@@ -17,10 +17,6 @@ private const val HOME_DETAIL_REVEAL_SLIDE_OFFSET_DP = 14
 private const val HOME_DETAIL_REVEAL_INITIAL_SCALE = 0.985f
 private const val HOME_SHARED_TRANSITION_CARD_CORNER_DP = 16
 private const val HOME_SHARED_TRANSITION_PLAYER_CORNER_DP = 12
-private const val VIDEO_CARD_RETURN_REBOUND_START_SCALE = 0.984f
-private const val VIDEO_CARD_RETURN_REBOUND_TRANSLATION_Y_DP = 2.25f
-private const val VIDEO_CARD_RETURN_REBOUND_DAMPING_RATIO = 0.64f
-private const val VIDEO_CARD_RETURN_REBOUND_STIFFNESS = 520f
 private val VIDEO_CARD_IOS_LIKE_EASE_OUT = CubicBezierEasing(0.16f, 1f, 0.3f, 1f)
 
 internal data class VideoSharedTransitionOwnership(
@@ -201,37 +197,20 @@ internal fun shouldPlayVideoCardReturnRebound(
     isReturningFromDetail: Boolean,
     sharedTransitionReady: Boolean
 ): Boolean {
-    val normalizedBvid = cardBvid.trim()
-    val normalizedCardRoute = cardSourceRoute?.substringBefore("?")?.takeIf { it.isNotBlank() }
-    val normalizedReturnRoute = returningSourceRoute?.substringBefore("?")?.takeIf { it.isNotBlank() }
-    if (!isReturningFromDetail || !sharedTransitionReady) return false
-    if (normalizedBvid.isEmpty() || normalizedCardRoute == null) return false
-    if (normalizedCardRoute != normalizedReturnRoute) return false
-    return returningSourceKey == "$normalizedCardRoute:$normalizedBvid"
+    // 共享元素已经负责落点回收；额外回弹会在历史等列表返回末尾造成二次跳动。
+    return false
 }
 
 internal fun resolveVideoCardReturnReboundSpec(
     enabled: Boolean
 ): VideoCardReturnReboundSpec {
-    return if (enabled) {
-        VideoCardReturnReboundSpec(
-            enabled = true,
-            durationMillis = 150,
-            startScale = VIDEO_CARD_RETURN_REBOUND_START_SCALE,
-            startTranslationYDp = VIDEO_CARD_RETURN_REBOUND_TRANSLATION_Y_DP,
-            dampingRatio = VIDEO_CARD_RETURN_REBOUND_DAMPING_RATIO,
-            stiffness = VIDEO_CARD_RETURN_REBOUND_STIFFNESS,
-            easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
-        )
-    } else {
-        VideoCardReturnReboundSpec(
-            enabled = false,
-            durationMillis = 0,
-            startScale = 1f,
-            startTranslationYDp = 0f,
-            dampingRatio = 1f,
-            stiffness = 0f,
-            easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
-        )
-    }
+    return VideoCardReturnReboundSpec(
+        enabled = false,
+        durationMillis = 0,
+        startScale = 1f,
+        startTranslationYDp = 0f,
+        dampingRatio = 1f,
+        stiffness = 0f,
+        easing = VIDEO_CARD_IOS_LIKE_EASE_OUT
+    )
 }
