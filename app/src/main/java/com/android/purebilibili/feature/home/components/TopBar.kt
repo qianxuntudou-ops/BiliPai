@@ -148,12 +148,22 @@ internal fun resolveMiuixVisibleTabIndices(
     if (totalCount <= 0 || maxVisibleCount <= 0) return emptyList()
     val visibleCount = totalCount.coerceAtMost(maxVisibleCount)
     val safeSelectedIndex = selectedIndex.coerceIn(0, totalCount - 1)
-    val startIndex = if (safeSelectedIndex < visibleCount) {
-        0
-    } else {
-        (safeSelectedIndex - visibleCount + 1).coerceAtMost(totalCount - visibleCount)
+    if (safeSelectedIndex < visibleCount) {
+        return (0 until visibleCount).toList()
     }
-    return (startIndex until startIndex + visibleCount).toList()
+
+    // MIUIX 原生 TabRow 会在 tabs 列表整体左移时重建指示器起点，
+    // 第 5 个标签容易先跳到前槽位再滑过去；固定前置槽位，只替换尾槽。
+    val pinnedLeadingCount = (visibleCount - 1).coerceAtLeast(0)
+    return (0 until pinnedLeadingCount).toList() + safeSelectedIndex
+}
+
+internal fun resolveMiuixSelectedVisibleIndex(
+    visibleIndices: List<Int>,
+    selectedIndex: Int
+): Int {
+    val resolved = visibleIndices.indexOf(selectedIndex)
+    return if (resolved >= 0) resolved else 0
 }
 
 internal fun resolveTopTabMinItemWidthDp(isFloatingStyle: Boolean): Float {
@@ -1052,18 +1062,19 @@ private fun MiuixCategoryTabRow(
             ).roundToInt().coerceIn(0, (categories.size - 1).coerceAtLeast(0))
         }
     }
-    val visibleTabIndices = remember(categories.size, selectedIndex) {
+    val visibleTabIndices = remember(categories.size, selectedCategoryIndex) {
         resolveMiuixVisibleTabIndices(
             totalCount = categories.size,
-            selectedIndex = selectedIndex
+            selectedIndex = selectedCategoryIndex
         )
     }
     val visibleCategories = remember(categories, visibleTabIndices) {
         visibleTabIndices.mapNotNull { index -> categories.getOrNull(index) }
     }
-    val selectedTabIndex = visibleTabIndices.indexOf(selectedCategoryIndex)
-        .takeIf { it >= 0 }
-        ?: 0
+    val selectedTabIndex = resolveMiuixSelectedVisibleIndex(
+        visibleIndices = visibleTabIndices,
+        selectedIndex = selectedCategoryIndex
+    )
     val topTabSpec = presetStyle.md3VisualSpec
     val actionButtonSize = presetStyle.actionButtonSizeDocked
     val actionButtonCorner = presetStyle.actionButtonCornerDocked
