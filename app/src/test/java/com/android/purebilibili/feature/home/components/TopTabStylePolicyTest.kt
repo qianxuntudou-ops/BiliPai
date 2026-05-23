@@ -403,6 +403,28 @@ class TopTabStylePolicyTest {
     }
 
     @Test
+    fun `android native miuix top tabs keep native contour indicator driver`() {
+        val source = sourceText("src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
+        val miuixSelectionSource = source
+            .substringAfter("private fun MiuixCategoryTabRow(")
+            .substringBefore("val topTabSpec =")
+
+        assertTrue(
+            "MiuiX 分类条必须继续使用原生轮廓 TabRow",
+            source.substringAfter("private fun MiuixCategoryTabRow(")
+                .contains("MiuixTabRowWithContour(")
+        )
+        assertFalse(
+            "MiuiX 原生轮廓指示器不应复用 MD3 的 pager 指示器位置驱动",
+            miuixSelectionSource.contains("resolveTopTabIndicatorRenderPosition(")
+        )
+        assertTrue(
+            "MiuiX 可见槽位应由已选中分类驱动，避免滑动中退化成 MD3 指示器语义",
+            miuixSelectionSource.contains("selectedIndex = selectedIndex")
+        )
+    }
+
+    @Test
     fun `android native miuix top tabs skip outer chrome surface`() {
         assertFalse(
             shouldDrawHomeTopTabOuterChromeSurface(

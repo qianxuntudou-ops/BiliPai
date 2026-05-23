@@ -1015,7 +1015,6 @@ fun CategoryTabRow(
             selectedIndex = selectedIndex,
             onCategorySelected = onCategorySelected,
             onPartitionClick = onPartitionClick,
-            pagerState = pagerState,
             haptic = haptic,
             scrollChannel = scrollChannel,
             presetStyle = presetStyle
@@ -1046,26 +1045,14 @@ private fun MiuixCategoryTabRow(
     selectedIndex: Int,
     onCategorySelected: (Int) -> Unit,
     onPartitionClick: () -> Unit,
-    pagerState: androidx.compose.foundation.pager.PagerState?,
     haptic: (HapticType) -> Unit,
     scrollChannel: kotlinx.coroutines.channels.Channel<Unit>?,
     presetStyle: HomeTopPresetStyle
 ) {
-    val selectedCategoryIndex by remember(pagerState, selectedIndex, categories.size) {
-        derivedStateOf {
-            resolveTopTabIndicatorRenderPosition(
-                selectedIndex = selectedIndex,
-                pagerCurrentPage = pagerState?.currentPage,
-                pagerTargetPage = pagerState?.targetPage,
-                pagerCurrentPageOffsetFraction = pagerState?.currentPageOffsetFraction,
-                pagerIsScrolling = pagerState?.isScrollInProgress == true
-            ).roundToInt().coerceIn(0, (categories.size - 1).coerceAtLeast(0))
-        }
-    }
-    val visibleTabIndices = remember(categories.size, selectedCategoryIndex) {
+    val visibleTabIndices = remember(categories.size, selectedIndex) {
         resolveMiuixVisibleTabIndices(
             totalCount = categories.size,
-            selectedIndex = selectedCategoryIndex
+            selectedIndex = selectedIndex
         )
     }
     val visibleCategories = remember(categories, visibleTabIndices) {
@@ -1073,7 +1060,7 @@ private fun MiuixCategoryTabRow(
     }
     val selectedTabIndex = resolveMiuixSelectedVisibleIndex(
         visibleIndices = visibleTabIndices,
-        selectedIndex = selectedCategoryIndex
+        selectedIndex = selectedIndex
     )
     val topTabSpec = presetStyle.md3VisualSpec
     val actionButtonSize = presetStyle.actionButtonSizeDocked
