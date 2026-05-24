@@ -14,17 +14,15 @@ class RuleEngineTest {
         val video = VideoItem(
             bvid = "BV1",
             title = "测试视频",
-            owner = Owner(mid = 42L, name = "UP-A", level = 3),
+            owner = Owner(mid = 42L, name = "UP-A"),
             stat = Stat(view = 1_000, reply = 8),
             tid = 36,
-            tname = "知识",
-            tags = listOf("Kotlin", "Compose")
+            tname = "知识"
         )
         val rules = listOf(
             Rule(field = "stat.reply", op = "ge", value = JsonPrimitive(5), action = "hide"),
             Rule(field = "tid", op = "eq", value = JsonPrimitive(36), action = "hide"),
-            Rule(field = "tags", op = "contains", value = JsonPrimitive("Compose"), action = "hide"),
-            Rule(field = "owner.level", op = "lt", value = JsonPrimitive(4), action = "hide")
+            Rule(field = "tname", op = "eq", value = JsonPrimitive("知识"), action = "hide")
         )
 
         assertFalse(RuleEngine.shouldShowVideo(video, rules))

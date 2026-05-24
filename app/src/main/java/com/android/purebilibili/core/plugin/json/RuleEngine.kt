@@ -105,10 +105,8 @@ object RuleEngine {
             "bvid" -> video.bvid
             "tid" -> video.tid
             "tname" -> video.tname
-            "tags" -> video.tags
             "owner.mid" -> video.owner.mid
             "owner.name" -> video.owner.name
-            "owner.level" -> video.owner.level
             "stat.view" -> video.stat.view
             "stat.like" -> video.stat.like
             "stat.reply" -> video.stat.reply

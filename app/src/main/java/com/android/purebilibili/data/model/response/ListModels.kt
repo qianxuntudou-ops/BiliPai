@@ -189,7 +189,6 @@ data class VideoItem(
     val stat: Stat = Stat(),
     val tid: Int = 0,
     val tname: String = "",
-    val tags: List<String> = emptyList(),
     val duration: Int = 0,
     val progress: Int = -1,
     val view_at: Long = 0,
@@ -220,8 +219,7 @@ data class VideoRights(
 data class Owner(
     val mid: Long = 0,
     val name: String = "",
-    val face: String = "",
-    val level: Int = 0
+    val face: String = ""
 )
 
 @Serializable
@@ -342,6 +340,8 @@ data class PopularItem(
     val aid: Long = 0,
     val bvid: String = "",
     val cid: Long = 0,
+    val tid: Int = 0,
+    val tname: String = "",
     val pic: String = "",
     val title: String = "",
     val duration: Int = 0,
@@ -360,7 +360,17 @@ data class PopularItem(
             title = title,
             pic = pic,
             owner = owner,
-            stat = Stat(view = stat.view, like = stat.like, danmaku = stat.danmaku),
+            stat = Stat(
+                view = stat.view,
+                like = stat.like,
+                danmaku = stat.danmaku,
+                reply = stat.reply,
+                coin = stat.coin,
+                favorite = stat.favorite,
+                share = stat.share
+            ),
+            tid = tid,
+            tname = tname,
             duration = duration,
             pubdate = pubdate,
             rights = rights
@@ -478,6 +488,8 @@ data class DynamicRegionItem(
     val aid: Long = 0,
     val bvid: String = "",
     val cid: Long = 0,
+    val tid: Int = 0,
+    val tname: String = "",
     val pic: String = "",
     val title: String = "",
     val duration: Int = 0,
@@ -504,6 +516,8 @@ data class DynamicRegionItem(
                 favorite = stat.favorite,
                 share = stat.share
             ),
+            tid = tid,
+            tname = tname,
             duration = duration,
             pubdate = pubdate,
             rights = rights

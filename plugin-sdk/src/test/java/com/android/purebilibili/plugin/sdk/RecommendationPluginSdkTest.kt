@@ -47,7 +47,6 @@ class RecommendationPluginSdkTest {
                     partitionId = 36,
                     partitionName = "知识",
                     replyCount = 42,
-                    authorLevel = 6,
                     tags = listOf("Kotlin")
                 )
             ),
@@ -64,7 +63,6 @@ class RecommendationPluginSdkTest {
         assertEquals(36, result.items.single().video.partitionId)
         assertEquals("知识", result.items.single().video.partitionName)
         assertEquals(42, result.items.single().video.replyCount)
-        assertEquals(6, result.items.single().video.authorLevel)
         assertEquals(listOf("Kotlin"), result.items.single().video.tags)
         assertTrue(result.items.single().explanation.isNotBlank())
     }

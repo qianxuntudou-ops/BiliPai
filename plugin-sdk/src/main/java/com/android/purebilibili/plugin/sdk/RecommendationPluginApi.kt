@@ -14,7 +14,6 @@ data class PluginVideoCandidate(
     val title: String,
     val authorName: String = "",
     val authorMid: Long? = null,
-    val authorLevel: Int = 0,
     val partitionId: Int = 0,
     val partitionName: String = "",
     val durationSeconds: Long = 0,
