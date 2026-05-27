@@ -26,6 +26,8 @@ class PlayerInteractionSettingsMappingPolicyTest {
         assertEquals(FullscreenAspectRatio.FIT, result.fixedFullscreenAspectRatio)
         assertEquals(SubtitleAutoPreference.OFF, result.subtitleAutoPreference)
         assertEquals(2.0f, result.longPressSpeed)
+        assertFalse(result.longPressSpeedLockEnabled)
+        assertFalse(result.longPressSpeedLockHintShown)
         assertEquals(0.0f, result.subtitleVerticalOffsetFraction)
         assertFalse(result.hideVideoPageStatusBar)
         assertEquals(TabletCommentPanelWidthPreset.STANDARD, result.tabletCommentPanelWidthPreset)
@@ -45,6 +47,8 @@ class PlayerInteractionSettingsMappingPolicyTest {
             booleanPreferencesKey("hide_video_page_status_bar") to true,
             intPreferencesKey("tablet_comment_panel_width_preset") to TabletCommentPanelWidthPreset.ULTRA_WIDE.value,
             floatPreferencesKey("long_press_speed") to 4.6f,
+            booleanPreferencesKey("long_press_speed_lock_enabled") to true,
+            booleanPreferencesKey("long_press_speed_lock_hint_shown") to true,
             floatPreferencesKey("subtitle_vertical_offset_fraction") to -0.42f,
             booleanPreferencesKey("two_finger_vertical_speed_enabled") to true,
             booleanPreferencesKey("hi_res_long_press_compat_hint_shown") to true
@@ -62,6 +66,8 @@ class PlayerInteractionSettingsMappingPolicyTest {
         assertTrue(result.hideVideoPageStatusBar)
         assertEquals(TabletCommentPanelWidthPreset.ULTRA_WIDE, result.tabletCommentPanelWidthPreset)
         assertEquals(3.0f, result.longPressSpeed)
+        assertTrue(result.longPressSpeedLockEnabled)
+        assertTrue(result.longPressSpeedLockHintShown)
         assertEquals(-0.30f, result.subtitleVerticalOffsetFraction)
         assertTrue(result.twoFingerVerticalSpeedEnabled)
         assertTrue(result.hiResLongPressCompatHintShown)

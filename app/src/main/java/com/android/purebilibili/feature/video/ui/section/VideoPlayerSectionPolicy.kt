@@ -244,6 +244,7 @@ internal fun shouldTriggerPinchExitFullscreen(
 }
 
 internal fun shouldLockLongPressSpeedInTargetZone(
+    longPressSpeedLockEnabled: Boolean = true,
     isLongPressing: Boolean,
     alreadyLocked: Boolean,
     currentPointerY: Float,
@@ -252,6 +253,7 @@ internal fun shouldLockLongPressSpeedInTargetZone(
     accumulatedDragYPx: Float = 0f,
     minDragDistancePx: Float = 0f
 ): Boolean {
+    if (!longPressSpeedLockEnabled) return false
     if (!isLongPressing || alreadyLocked) return false
     if (containerHeightPx <= 0f || lockZoneHeightPx <= 0f) return false
     if (abs(accumulatedDragYPx) < minDragDistancePx.coerceAtLeast(0f)) return false

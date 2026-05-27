@@ -955,6 +955,7 @@ class VideoPlayerSectionPolicyTest {
     fun longPressSpeedLock_triggersOnlyInTopOrBottomTargetZone() {
         assertTrue(
             shouldLockLongPressSpeedInTargetZone(
+                longPressSpeedLockEnabled = true,
                 isLongPressing = true,
                 alreadyLocked = false,
                 currentPointerY = 72f,
@@ -964,9 +965,20 @@ class VideoPlayerSectionPolicyTest {
         )
         assertTrue(
             shouldLockLongPressSpeedInTargetZone(
+                longPressSpeedLockEnabled = true,
                 isLongPressing = true,
                 alreadyLocked = false,
                 currentPointerY = 928f,
+                containerHeightPx = 1_000f,
+                lockZoneHeightPx = 120f
+            )
+        )
+        assertFalse(
+            shouldLockLongPressSpeedInTargetZone(
+                longPressSpeedLockEnabled = false,
+                isLongPressing = true,
+                alreadyLocked = false,
+                currentPointerY = 72f,
                 containerHeightPx = 1_000f,
                 lockZoneHeightPx = 120f
             )
@@ -1055,6 +1067,25 @@ class VideoPlayerSectionPolicyTest {
         assertTrue(visual.edgeGradientAlpha > 0f)
         assertTrue(visual.centerMarkerAlpha > visual.edgeGradientAlpha)
         assertTrue(visual.centerMarkerWidthFraction < 0.5f)
+    }
+
+    @Test
+    fun longPressSpeedFeedback_usesLightweightTextAndNoDefaultLockInstruction() {
+        val source = loadVideoPlayerSectionSource()
+
+        assertTrue(source.contains("\"倍速播放中 ${'$'}{effectiveLongPressSpeed}x\""))
+        assertFalse(source.contains("拖至上下区域锁定"))
+        assertFalse(source.contains("rememberInfiniteTransition(label = \"fast_forward\")"))
+    }
+
+    @Test
+    fun longPressSpeedLockHint_usesNonModalPromptActions() {
+        val source = loadVideoPlayerSectionSource()
+
+        assertTrue(source.contains("需要长按锁定倍速吗？"))
+        assertTrue(source.contains("开启锁定"))
+        assertTrue(source.contains("不再提示"))
+        assertFalse(source.contains("AlertDialog"))
     }
 
     @Test

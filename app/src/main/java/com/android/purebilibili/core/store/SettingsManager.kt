@@ -546,6 +546,8 @@ data class PlayerInteractionSettings(
     val fixedFullscreenAspectRatio: FullscreenAspectRatio = FullscreenAspectRatio.FIT,
     val subtitleAutoPreference: SubtitleAutoPreference = SubtitleAutoPreference.OFF,
     val longPressSpeed: Float = 2.0f,
+    val longPressSpeedLockEnabled: Boolean = false,
+    val longPressSpeedLockHintShown: Boolean = false,
     val subtitleVerticalOffsetFraction: Float = 0.0f,
     val twoFingerVerticalSpeedEnabled: Boolean = false,
     val twoFingerHorizontalSpeedEnabled: Boolean = false,
@@ -762,6 +764,10 @@ object SettingsManager {
     private val KEY_SEEK_BACKWARD_SECONDS = intPreferencesKey("seek_backward_seconds")
     //  [新增] 长按倍速 (默认 2.0x)
     private val KEY_LONG_PRESS_SPEED = floatPreferencesKey("long_press_speed")
+    private val KEY_LONG_PRESS_SPEED_LOCK_ENABLED =
+        booleanPreferencesKey("long_press_speed_lock_enabled")
+    private val KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN =
+        booleanPreferencesKey("long_press_speed_lock_hint_shown")
     private val KEY_TWO_FINGER_VERTICAL_SPEED_ENABLED =
         booleanPreferencesKey("two_finger_vertical_speed_enabled")
     private val KEY_TWO_FINGER_HORIZONTAL_SPEED_ENABLED =
@@ -1049,6 +1055,8 @@ object SettingsManager {
             longPressSpeed = normalizeLongPressSpeed(
                 preferences[KEY_LONG_PRESS_SPEED] ?: DEFAULT_LONG_PRESS_SPEED
             ),
+            longPressSpeedLockEnabled = preferences[KEY_LONG_PRESS_SPEED_LOCK_ENABLED] ?: false,
+            longPressSpeedLockHintShown = preferences[KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN] ?: false,
             subtitleVerticalOffsetFraction = normalizeSubtitleVerticalOffsetFraction(
                 preferences[KEY_SUBTITLE_VERTICAL_OFFSET_FRACTION] ?: 0.0f
             ),
@@ -1071,6 +1079,9 @@ object SettingsManager {
     private const val CACHE_KEY_RESUME_PROMPT_SHOWN = "resume_prompt_shown"
     private const val HI_RES_LONG_PRESS_HINT_CACHE_PREFS = "hi_res_long_press_hint_cache"
     private const val CACHE_KEY_HI_RES_LONG_PRESS_HINT_SHOWN = "hi_res_long_press_hint_shown"
+    private const val LONG_PRESS_SPEED_LOCK_CACHE_PREFS = "long_press_speed_lock_cache"
+    private const val CACHE_KEY_LONG_PRESS_SPEED_LOCK_ENABLED = "long_press_speed_lock_enabled"
+    private const val CACHE_KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN = "long_press_speed_lock_hint_shown"
 
     fun getClickToPlay(context: Context): Flow<Boolean> = context.settingsDataStore.data
         .map { preferences -> preferences[KEY_CLICK_TO_PLAY] ?: true }
@@ -1493,6 +1504,44 @@ object SettingsManager {
         context.settingsDataStore.edit { preferences -> 
             preferences[KEY_LONG_PRESS_SPEED] = normalizeLongPressSpeed(speed)
         }
+    }
+
+    fun getLongPressSpeedLockEnabled(context: Context): Flow<Boolean> =
+        context.settingsDataStore.data
+            .map { preferences -> preferences[KEY_LONG_PRESS_SPEED_LOCK_ENABLED] ?: false }
+
+    suspend fun setLongPressSpeedLockEnabled(context: Context, enabled: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_LONG_PRESS_SPEED_LOCK_ENABLED] = enabled
+        }
+        context.getSharedPreferences(LONG_PRESS_SPEED_LOCK_CACHE_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_ENABLED, enabled)
+            .apply()
+    }
+
+    fun getLongPressSpeedLockEnabledSync(context: Context): Boolean {
+        return context.getSharedPreferences(LONG_PRESS_SPEED_LOCK_CACHE_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_ENABLED, false)
+    }
+
+    fun getLongPressSpeedLockHintShown(context: Context): Flow<Boolean> =
+        context.settingsDataStore.data
+            .map { preferences -> preferences[KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN] ?: false }
+
+    suspend fun setLongPressSpeedLockHintShown(context: Context, shown: Boolean) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN] = shown
+        }
+        context.getSharedPreferences(LONG_PRESS_SPEED_LOCK_CACHE_PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN, shown)
+            .apply()
+    }
+
+    fun getLongPressSpeedLockHintShownSync(context: Context): Boolean {
+        return context.getSharedPreferences(LONG_PRESS_SPEED_LOCK_CACHE_PREFS, Context.MODE_PRIVATE)
+            .getBoolean(CACHE_KEY_LONG_PRESS_SPEED_LOCK_HINT_SHOWN, false)
     }
 
     fun getSubtitleVerticalOffsetFraction(context: Context): Flow<Float> = context.settingsDataStore.data
@@ -4987,6 +5036,7 @@ object SettingsManager {
             IntShareablePreferenceDefinition(KEY_SEEK_FORWARD_SECONDS, SettingsShareSection.GESTURE),
             IntShareablePreferenceDefinition(KEY_SEEK_BACKWARD_SECONDS, SettingsShareSection.GESTURE),
             FloatShareablePreferenceDefinition(KEY_LONG_PRESS_SPEED, SettingsShareSection.GESTURE),
+            BooleanShareablePreferenceDefinition(KEY_LONG_PRESS_SPEED_LOCK_ENABLED, SettingsShareSection.GESTURE),
             FloatShareablePreferenceDefinition(
                 KEY_SUBTITLE_VERTICAL_OFFSET_FRACTION,
                 SettingsShareSection.GESTURE
