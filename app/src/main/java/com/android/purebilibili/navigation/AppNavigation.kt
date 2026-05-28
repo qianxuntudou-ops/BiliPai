@@ -341,6 +341,8 @@ fun AppNavigation(
     var inAppSearchKeyword by remember { mutableStateOf<String?>(null) }
     var searchEntryMotionSource by remember { mutableStateOf(SearchEntryMotionSource.NONE) }
     var searchEntryMotionKey by remember { mutableStateOf(0) }
+    var bottomBarSearchLaunchKey by remember { mutableStateOf(0) }
+    var pendingBottomBarSearchLaunchKey by remember { mutableStateOf<Int?>(null) }
     var navigation3ReturnSession by remember { mutableStateOf(BiliPaiReturnSessionState()) }
     val effectiveInitialSearchKeyword = inAppSearchKeyword ?: initialSearchKeyword
     val consumeInitialSearchKeyword: (String) -> Unit = { consumedKeyword ->
@@ -596,7 +598,9 @@ fun AppNavigation(
             }
         }
         fun requestSearchFromBottomBar() {
-            navigateToSearchFromBottomBar()
+            if (pendingBottomBarSearchLaunchKey != null) return
+            bottomBarSearchLaunchKey += 1
+            pendingBottomBarSearchLaunchKey = bottomBarSearchLaunchKey
         }
         fun navigateToVideoRouteInNavigation3(route: String, sourceRoute: String?) {
             if (!canNavigate(false)) return
@@ -2189,6 +2193,13 @@ fun AppNavigation(
                                     onDynamicDoubleTap = { dynamicScrollChannel.trySend(Unit) },
                                     onSearchClick = { requestSearchFromBottomBar() },
                                     onSearchKeywordSubmit = submitSearchKeywordInNavigation3,
+                                    searchLaunchKey = bottomBarSearchLaunchKey,
+                                    onSearchLaunchTransitionFinished = { completedKey ->
+                                        if (pendingBottomBarSearchLaunchKey == completedKey) {
+                                            pendingBottomBarSearchLaunchKey = null
+                                            navigateToSearchFromBottomBar()
+                                        }
+                                    },
                                     hazeState = if (isBottomBarBlurEnabled) mainHazeState else null,
                                     isFloating = true,
                                     labelMode = bottomBarLabelMode,
@@ -2221,6 +2232,13 @@ fun AppNavigation(
                                 onDynamicDoubleTap = { dynamicScrollChannel.trySend(Unit) },
                                 onSearchClick = { requestSearchFromBottomBar() },
                                 onSearchKeywordSubmit = submitSearchKeywordInNavigation3,
+                                searchLaunchKey = bottomBarSearchLaunchKey,
+                                onSearchLaunchTransitionFinished = { completedKey ->
+                                    if (pendingBottomBarSearchLaunchKey == completedKey) {
+                                        pendingBottomBarSearchLaunchKey = null
+                                        navigateToSearchFromBottomBar()
+                                    }
+                                },
                                 hazeState = if (isBottomBarBlurEnabled) mainHazeState else null,
                                 isFloating = false,
                                 labelMode = bottomBarLabelMode,

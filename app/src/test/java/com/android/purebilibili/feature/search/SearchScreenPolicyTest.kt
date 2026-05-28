@@ -213,11 +213,12 @@ class SearchScreenPolicyTest {
 
         assertTrue(navigationSource.contains("fun navigateToSearchFromBottomBar()"))
         assertTrue(navigationSource.contains("fun requestSearchFromBottomBar()"))
-        assertFalse(navigationSource.contains("bottomBarSearchLaunchKey += 1"))
-        assertFalse(navigationSource.contains("pendingBottomBarSearchLaunchKey"))
+        assertTrue(navigationSource.contains("bottomBarSearchLaunchKey += 1"))
+        assertTrue(navigationSource.contains("pendingBottomBarSearchLaunchKey = bottomBarSearchLaunchKey"))
         assertTrue(navigationSource.contains("onSearchClick = { requestSearchFromBottomBar() }"))
-        assertFalse(navigationSource.contains("searchLaunchKey = bottomBarSearchLaunchKey"))
-        assertFalse(navigationSource.contains("onSearchLaunchTransitionFinished = { completedKey ->"))
+        assertTrue(navigationSource.contains("searchLaunchKey = bottomBarSearchLaunchKey"))
+        assertTrue(navigationSource.contains("onSearchLaunchTransitionFinished = { completedKey ->"))
+        assertTrue(navigationSource.contains("if (pendingBottomBarSearchLaunchKey == completedKey)"))
         assertTrue(navigationSource.contains("searchEntryMotionSource = SearchEntryMotionSource.BOTTOM_BAR"))
         assertTrue(navigationSource.contains("searchEntryMotionKey += 1"))
         assertTrue(navigationSource.contains("entryMotionSource = searchEntryMotionSource"))
@@ -248,11 +249,11 @@ class SearchScreenPolicyTest {
                 reducedMotionBudget = false
             )
         )
-        assertEquals(260, bottomBarSpec.durationMillis)
-        assertEquals(0.72f, bottomBarSpec.initialAlpha)
-        assertEquals(0.92f, bottomBarSpec.initialScale)
-        assertEquals(26f, bottomBarSpec.initialTranslationYDp)
-        assertEquals(0.88f, bottomBarSpec.transformOriginPivotX)
+        assertEquals(320, bottomBarSpec.durationMillis)
+        assertEquals(0.58f, bottomBarSpec.initialAlpha)
+        assertEquals(0.88f, bottomBarSpec.initialScale)
+        assertEquals(360f, bottomBarSpec.initialTranslationYDp)
+        assertEquals(0.5f, bottomBarSpec.transformOriginPivotX)
         assertEquals(1f, bottomBarSpec.transformOriginPivotY)
 
         val reducedSpec = requireNotNull(

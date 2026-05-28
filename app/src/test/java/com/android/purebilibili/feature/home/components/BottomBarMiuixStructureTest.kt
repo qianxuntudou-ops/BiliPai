@@ -2,6 +2,7 @@ package com.android.purebilibili.feature.home.components
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -42,7 +43,10 @@ class BottomBarMiuixStructureTest {
         assertFalse(kernelSuRendererSource.contains("scaleX = lerp(1f, searchLaunchSpec.targetScaleX, searchLaunchProgress)"))
         assertFalse(kernelSuRendererSource.contains("scaleY = lerp(1f, searchLaunchSpec.targetScaleY, searchLaunchProgress)"))
         assertFalse(kernelSuRendererSource.contains("alpha = lerp(1f, searchLaunchSpec.targetAlpha, searchLaunchProgress)"))
-        assertFalse(kernelSuRendererSource.contains("onSearchLaunchTransitionFinished(searchLaunchKey)"))
+        assertTrue(kernelSuRendererSource.contains("val searchLaunchMorphSpec = remember { resolveBottomBarSearchLaunchMorphSpec() }"))
+        assertTrue(kernelSuRendererSource.contains("var searchLaunchInProgress by remember"))
+        assertTrue(kernelSuRendererSource.contains("searchExpansionOverride = BottomBarSearchExpansionOverride.EXPANDED"))
+        assertTrue(kernelSuRendererSource.contains("onSearchLaunchTransitionFinished(searchLaunchKey)"))
         assertTrue(kernelSuRendererSource.contains(".width(dockWidth)"))
         assertTrue(kernelSuRendererSource.contains("resolveSharedBottomBarCapsuleShape("))
         assertTrue(kernelSuRendererSource.contains(".kernelSuFloatingDockSurface("))
@@ -378,11 +382,18 @@ class BottomBarMiuixStructureTest {
     }
 
     @Test
-    fun `search launch does not compress bottom bar before navigation`() {
+    fun `search launch expands search box before top bar handoff without compressing dock`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
+
+        val spec = resolveBottomBarSearchLaunchMorphSpec()
+        assertEquals(190, spec.expandDurationMillis)
+        assertEquals(40L, spec.postHandoffResetDelayMillis)
 
         assertTrue(source.contains("searchLaunchKey: Int = 0"))
         assertTrue(source.contains("onSearchLaunchTransitionFinished: (Int) -> Unit = {}"))
+        assertTrue(source.contains("searchLaunchInProgress = true"))
+        assertTrue(source.contains("delay(searchLaunchMorphSpec.expandDurationMillis.toLong())"))
+        assertTrue(source.contains("onSearchLaunchTransitionFinished(searchLaunchKey)"))
         assertFalse(source.contains("searchLaunchProgressState.animateTo("))
         assertFalse(source.contains("scaleX = lerp(1f, searchLaunchSpec.targetScaleX, searchLaunchProgress)"))
         assertFalse(source.contains("scaleY = lerp(1f, searchLaunchSpec.targetScaleY, searchLaunchProgress)"))

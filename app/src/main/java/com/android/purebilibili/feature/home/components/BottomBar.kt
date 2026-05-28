@@ -1128,6 +1128,18 @@ internal data class BottomBarBackdropPresetProgress(
     val indicatorProgress: Float
 )
 
+internal data class BottomBarSearchLaunchMorphSpec(
+    val expandDurationMillis: Int,
+    val postHandoffResetDelayMillis: Long
+)
+
+internal fun resolveBottomBarSearchLaunchMorphSpec(): BottomBarSearchLaunchMorphSpec {
+    return BottomBarSearchLaunchMorphSpec(
+        expandDurationMillis = 190,
+        postHandoffResetDelayMillis = 40L
+    )
+}
+
 internal data class BottomBarItemMotionVisual(
     val coverage: Float,
     val scale: Float,
@@ -2676,6 +2688,8 @@ private fun KernelSuAlignedBottomBar(
         mutableStateOf(BottomBarSearchExpansionOverride.FOLLOW_AUTO)
     }
     var searchQuery by remember { mutableStateOf("") }
+    val searchLaunchMorphSpec = remember { resolveBottomBarSearchLaunchMorphSpec() }
+    var searchLaunchInProgress by remember { mutableStateOf(false) }
     val indicatorSettleReboundTransform = rememberBottomBarSettleReboundTransform(
         dampedDragState.settledReleaseCount
     )
@@ -2709,7 +2723,7 @@ private fun KernelSuAlignedBottomBar(
         bottomBarSearchEnabled = searchEnabled,
         shouldAutoExpand = shouldAutoExpandSearch,
         expansionOverride = searchExpansionOverride
-    )
+    ) || searchLaunchInProgress
     LaunchedEffect(
         currentItem,
         searchEnabled,
@@ -2725,6 +2739,16 @@ private fun KernelSuAlignedBottomBar(
         if (shouldResetSearchOverride) {
             searchExpansionOverride = BottomBarSearchExpansionOverride.FOLLOW_AUTO
         }
+    }
+    LaunchedEffect(searchLaunchKey) {
+        if (searchLaunchKey <= 0 || !searchEnabled) return@LaunchedEffect
+        searchLaunchInProgress = true
+        // 搜索入口交接只推动搜索胶囊展开，避免恢复旧版底栏整体缩放造成的突兀感。
+        searchExpansionOverride = BottomBarSearchExpansionOverride.EXPANDED
+        delay(searchLaunchMorphSpec.expandDurationMillis.toLong())
+        onSearchLaunchTransitionFinished(searchLaunchKey)
+        delay(searchLaunchMorphSpec.postHandoffResetDelayMillis)
+        searchLaunchInProgress = false
     }
     Box(
         modifier = modifier.fillMaxWidth(),
