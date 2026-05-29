@@ -869,6 +869,16 @@ internal fun shouldAutoEnterPortraitFullscreenFromRoute(
         !hasAutoEnteredPortraitFromRoute
 }
 
+internal fun shouldStartInPortraitFullscreenFromRouteHint(
+    autoEnterPortraitFromRoute: Boolean,
+    startAudioFromRoute: Boolean,
+    initialVerticalFromRoute: Boolean
+): Boolean {
+    return autoEnterPortraitFromRoute &&
+        !startAudioFromRoute &&
+        initialVerticalFromRoute
+}
+
 internal fun shouldSyncMainPlayerToInternalBvid(
     isPortraitFullscreen: Boolean,
     routeBvid: String,
@@ -1039,6 +1049,7 @@ fun VideoDetailScreen(
     startInFullscreen: Boolean = false,
     startAudioFromRoute: Boolean = false,
     autoEnterPortraitFromRoute: Boolean = false,
+    initialVerticalFromRoute: Boolean = false,
     resumePositionMsFromRoute: Long = 0L,
     openCommentRootRpidFromRoute: Long = 0L,
     openCommentTargetRpidFromRoute: Long = 0L,
@@ -2001,7 +2012,15 @@ fun VideoDetailScreen(
     }
 
     // 📱 [修复] 提升竖屏全屏状态到 Screen 级别，防止 VideoPlayerState 重建时状态丢失
-    var isPortraitFullscreen by rememberSaveable { mutableStateOf(false) }
+    var isPortraitFullscreen by rememberSaveable {
+        mutableStateOf(
+            shouldStartInPortraitFullscreenFromRouteHint(
+                autoEnterPortraitFromRoute = autoEnterPortraitFromRoute,
+                startAudioFromRoute = startAudioFromRoute,
+                initialVerticalFromRoute = initialVerticalFromRoute
+            )
+        )
+    }
     val useSharedPortraitPlayer = shouldUseSharedPlayerForPortraitFullscreen()
     val portraitPagerMotionSpec = remember {
         resolveStandalonePortraitPagerMotionSpec()

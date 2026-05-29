@@ -146,6 +146,7 @@ internal fun HomeCategoryPageContent(
                 bvid = video.bvid,
                 cid = video.cid,
                 coverUrl = video.pic,
+                isVerticalVideo = video.isVertical,
                 source = HomeVideoClickSource.TODAY_WATCH
             )
         )
@@ -375,6 +376,7 @@ internal fun HomeCategoryPageContent(
                                                     dynamicId = video.dynamicId,
                                                     cid = cid,
                                                     coverUrl = video.pic,
+                                                    isVerticalVideo = video.isVertical,
                                                     source = HomeVideoClickSource.GRID
                                                 )
                                             )
@@ -417,6 +419,7 @@ internal fun HomeCategoryPageContent(
                                                     dynamicId = video.dynamicId,
                                                     cid = cid,
                                                     coverUrl = video.pic,
+                                                    isVerticalVideo = video.isVertical,
                                                     source = HomeVideoClickSource.GRID
                                                 )
                                             )

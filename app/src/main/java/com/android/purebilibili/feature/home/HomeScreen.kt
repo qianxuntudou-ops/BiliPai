@@ -1136,6 +1136,7 @@ fun HomeScreen(
                     bvid = video.bvid,
                     cid = video.cid,
                     coverUrl = video.pic,
+                    isVerticalVideo = video.isVertical,
                     source = HomeVideoClickSource.TODAY_WATCH
                 )
             )
@@ -1760,6 +1761,7 @@ fun HomeScreen(
                              bvid = item.bvid,
                              cid = item.cid,
                              coverUrl = item.pic,
+                             isVerticalVideo = item.isVertical,
                              source = HomeVideoClickSource.PREVIEW
                          )
                      )

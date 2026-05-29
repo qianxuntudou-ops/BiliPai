@@ -35,6 +35,17 @@ class BiliPaiNavKeyMappingPolicyTest {
     }
 
     @Test
+    fun videoRoute_preservesInitialVerticalHint() {
+        val route = "video/BV1vertical?cid=123&cover=https%3A%2F%2Fexample.com%2Fcover.jpg" +
+            "&startAudio=false&autoPortrait=true&fullscreen=false&resumePositionMs=0" +
+            "&commentRootRpid=0&commentTargetRpid=0&initialVertical=true"
+
+        val key = assertIs<BiliPaiNavKey.VideoDetail>(legacyRouteToBiliPaiNavKey(route))
+
+        assertEquals(true, key.initialVertical)
+    }
+
+    @Test
     fun navKey_roundTripsToLegacyRouteForCurrentBridge() {
         val key = BiliPaiNavKey.Space(mid = 42L)
 

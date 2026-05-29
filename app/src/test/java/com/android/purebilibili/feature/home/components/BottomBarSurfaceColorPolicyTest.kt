@@ -2,6 +2,7 @@ package com.android.purebilibili.feature.home.components
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import com.android.purebilibili.core.store.BottomBarLiquidGlassPreset
 import com.android.purebilibili.core.theme.UiPreset
 import com.android.purebilibili.core.ui.blur.BlurIntensity
 import kotlin.test.Test
@@ -119,6 +120,34 @@ class BottomBarSurfaceColorPolicyTest {
                 blurEnabled = true
             )
         )
+    }
+
+    @Test
+    fun `ios26 liquid glass preset uses distinct shell translucency`() {
+        val tuning = resolveAndroidNativeBottomBarTuning(
+            blurEnabled = true,
+            darkTheme = true
+        )
+        val bilipai = resolveAndroidNativeFloatingBottomBarContainerColor(
+            surfaceColor = Color.Black,
+            tuning = tuning,
+            glassEnabled = true,
+            blurEnabled = true,
+            blurIntensity = BlurIntensity.THIN,
+            liquidGlassPreset = BottomBarLiquidGlassPreset.BILIPAI_TUNED
+        )
+        val ios26 = resolveAndroidNativeFloatingBottomBarContainerColor(
+            surfaceColor = Color.Black,
+            tuning = tuning,
+            glassEnabled = true,
+            blurEnabled = true,
+            blurIntensity = BlurIntensity.THIN,
+            liquidGlassPreset = BottomBarLiquidGlassPreset.IOS26_REFINED
+        )
+
+        assertEquals(0.30f, bilipai.alpha, 0.003f)
+        assertEquals(0.34f, ios26.alpha, 0.003f)
+        assertTrue(ios26.alpha > bilipai.alpha)
     }
 
     @Test

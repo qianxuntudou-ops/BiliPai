@@ -157,7 +157,7 @@ import java.nio.charset.StandardCharsets
 // 定义路由参数结构
 object VideoRoute {
     const val base = "video"
-    const val route = "$base/{bvid}?cid={cid}&cover={cover}&startAudio={startAudio}&autoPortrait={autoPortrait}&fullscreen={fullscreen}&resumePositionMs={resumePositionMs}&commentRootRpid={commentRootRpid}&commentTargetRpid={commentTargetRpid}"
+    const val route = "$base/{bvid}?cid={cid}&cover={cover}&startAudio={startAudio}&autoPortrait={autoPortrait}&fullscreen={fullscreen}&resumePositionMs={resumePositionMs}&commentRootRpid={commentRootRpid}&commentTargetRpid={commentTargetRpid}&initialVertical={initialVertical}"
 
     internal fun resolveVideoRoutePath(
         bvid: String,
@@ -168,9 +168,11 @@ object VideoRoute {
         fullscreen: Boolean = false,
         resumePositionMs: Long = 0L,
         commentRootRpid: Long = 0L,
-        commentTargetRpid: Long = 0L
+        commentTargetRpid: Long = 0L,
+        initialVertical: Boolean = false
     ): String {
-        return "$base/$bvid?cid=$cid&cover=$encodedCover&startAudio=$startAudio&autoPortrait=$autoPortrait&fullscreen=$fullscreen&resumePositionMs=${resumePositionMs.coerceAtLeast(0L)}&commentRootRpid=${commentRootRpid.coerceAtLeast(0L)}&commentTargetRpid=${commentTargetRpid.coerceAtLeast(0L)}"
+        val initialVerticalQuery = if (initialVertical) "&initialVertical=true" else ""
+        return "$base/$bvid?cid=$cid&cover=$encodedCover&startAudio=$startAudio&autoPortrait=$autoPortrait&fullscreen=$fullscreen&resumePositionMs=${resumePositionMs.coerceAtLeast(0L)}&commentRootRpid=${commentRootRpid.coerceAtLeast(0L)}&commentTargetRpid=${commentTargetRpid.coerceAtLeast(0L)}$initialVerticalQuery"
     }
 
     // 构建 helper
@@ -183,7 +185,8 @@ object VideoRoute {
         fullscreen: Boolean = false,
         resumePositionMs: Long = 0L,
         commentRootRpid: Long = 0L,
-        commentTargetRpid: Long = 0L
+        commentTargetRpid: Long = 0L,
+        initialVertical: Boolean = false
     ): String {
         val encodedCover = Uri.encode(coverUrl)
         return resolveVideoRoutePath(
@@ -195,7 +198,8 @@ object VideoRoute {
             fullscreen = fullscreen,
             resumePositionMs = resumePositionMs,
             commentRootRpid = commentRootRpid,
-            commentTargetRpid = commentTargetRpid
+            commentTargetRpid = commentTargetRpid,
+            initialVertical = initialVertical
         )
     }
 }
@@ -217,7 +221,8 @@ internal fun resolveStandardVideoRoute(
     fullscreen: Boolean = false,
     resumePositionMs: Long = 0L,
     commentRootRpid: Long = 0L,
-    commentTargetRpid: Long = 0L
+    commentTargetRpid: Long = 0L,
+    initialVertical: Boolean = false
 ): String {
     val encodedCover = URLEncoder.encode(coverUrl, StandardCharsets.UTF_8.toString())
     return VideoRoute.resolveVideoRoutePath(
@@ -229,7 +234,8 @@ internal fun resolveStandardVideoRoute(
         fullscreen = fullscreen,
         resumePositionMs = resumePositionMs,
         commentRootRpid = commentRootRpid,
-        commentTargetRpid = commentTargetRpid
+        commentTargetRpid = commentTargetRpid,
+        initialVertical = initialVertical
     )
 }
 
@@ -636,6 +642,7 @@ fun AppNavigation(
             startAudio: Boolean = false,
             autoPortrait: Boolean = shouldAutoEnterPortraitForStandardVideoNavigation(),
             resumePositionMs: Long = 0L,
+            initialVertical: Boolean = false,
             sourceRoute: String? = null
         ) {
             val isNetworkAvailable = NetworkUtils.isNetworkAvailable(context)
@@ -660,7 +667,8 @@ fun AppNavigation(
                     coverUrl = coverUrl,
                     startAudio = startAudio,
                     autoPortrait = autoPortrait,
-                    resumePositionMs = resumePositionMs
+                    resumePositionMs = resumePositionMs,
+                    initialVertical = initialVertical
                 ),
                 sourceRoute = sourceRoute
             )
@@ -675,6 +683,7 @@ fun AppNavigation(
                             cid = intent.cid,
                             coverUrl = intent.coverUrl,
                             autoPortrait = true,
+                            initialVertical = intent.isVerticalVideo,
                             sourceRoute = ScreenRoutes.Home.route
                         )
                     } else {
@@ -1460,6 +1469,7 @@ fun AppNavigation(
                                 startInFullscreen = videoKey.fullscreen,
                                 startAudioFromRoute = videoKey.startAudio,
                                 autoEnterPortraitFromRoute = videoKey.autoPortrait,
+                                initialVerticalFromRoute = videoKey.initialVertical,
                                 resumePositionMsFromRoute = videoKey.resumePositionMs,
                                 openCommentRootRpidFromRoute = videoKey.commentRootRpid,
                                 openCommentTargetRpidFromRoute = videoKey.commentTargetRpid,
