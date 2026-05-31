@@ -73,6 +73,7 @@ import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.HapticType
 import com.android.purebilibili.feature.home.UserState
 import com.android.purebilibili.feature.home.HomeCategory
+import com.android.purebilibili.feature.home.HOME_TOP_PARTITION_TAB_ID
 import com.android.purebilibili.feature.home.resolveHomeTopCategories
 import com.android.purebilibili.core.store.LiquidGlassStyle
 import com.android.purebilibili.core.ui.AppShapes
@@ -114,16 +115,33 @@ internal fun resolveTopTabVisibleSlots(
 ): Int {
     if (categoryCount in 1..3) return categoryCount
     if (categoryCount <= 4) return 4
+    if (categoryCount == 6 && longestLabelLength <= 3) return 6
     return if (longestLabelLength >= 8) 4 else 5
 }
 
 internal fun resolveMd3TopTabVisibleSlots(): Int = 3
+
+internal fun resolveMd3TopTabLayoutVisibleSlots(
+    categoryCount: Int,
+    labelMode: Int,
+    showPartitionAction: Boolean
+): Int {
+    val normalizedLabelMode = normalizeTopTabLabelMode(labelMode)
+    val isTextOnly = shouldShowTopTabText(normalizedLabelMode) &&
+        !shouldShowTopTabIcon(normalizedLabelMode)
+    return if (!showPartitionAction && isTextOnly && categoryCount in 4..6) {
+        categoryCount
+    } else {
+        resolveMd3TopTabVisibleSlots()
+    }
+}
 
 internal fun resolveMd3TopTabItemWidthDp(
     containerWidthDp: Float,
     visibleSlots: Int = resolveMd3TopTabVisibleSlots()
 ): Float {
     if (containerWidthDp <= 0f) return 96f
+    if (visibleSlots >= 6) return (containerWidthDp / visibleSlots).coerceIn(52f, 72f)
     return (containerWidthDp * 0.3f).coerceIn(88f, 120f)
 }
 
@@ -612,7 +630,8 @@ private fun LightweightHomeTopTabs(
     skinPlainStyle: Boolean = false,
     skinPlainContentColor: Color? = null,
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
-    partitionSkinIconPath: String? = null
+    partitionSkinIconPath: String? = null,
+    showPartitionAction: Boolean = true
 ) {
     val uiPreset = LocalUiPreset.current
     val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
@@ -725,7 +744,14 @@ private fun LightweightHomeTopTabs(
                 longestLabelLength = categories.maxOfOrNull { it.length } ?: 0
             ).dp
             HomeTopTabRenderer.MD3,
-            HomeTopTabRenderer.MIUIX -> resolveMd3TopTabItemWidthDp(maxWidth.value).dp
+            HomeTopTabRenderer.MIUIX -> resolveMd3TopTabItemWidthDp(
+                containerWidthDp = maxWidth.value,
+                visibleSlots = resolveMd3TopTabLayoutVisibleSlots(
+                    categoryCount = categories.size,
+                    labelMode = normalizedLabelMode,
+                    showPartitionAction = showPartitionAction
+                )
+            ).dp
         }
         val density = LocalDensity.current
         val isDarkTheme = isSystemInDarkTheme()
@@ -935,44 +961,46 @@ private fun LightweightHomeTopTabs(
                 }
             }
 
-            Spacer(modifier = Modifier.width(4.dp))
+            if (showPartitionAction) {
+                Spacer(modifier = Modifier.width(4.dp))
 
-            Box(
-                modifier = Modifier
-                    .size(actionButtonSize)
-                    .then(
-                        if (skinPlainStyle) {
-                            Modifier
-                        } else {
-                            Modifier.clip(RoundedCornerShape(actionButtonCorner))
-                        }
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = LocalIndication.current
-                    ) {
-                        performHomeTopBarTap(haptic = haptic, onClick = onPartitionClick)
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (!partitionSkinIconPath.isNullOrBlank()) {
-                    AsyncImage(
-                        model = File(partitionSkinIconPath),
-                        contentDescription = "浏览全部分区",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.size(resolveTopTabSkinPartitionIconSize())
-                    )
-                } else {
-                    Icon(
-                        resolveTopTabPartitionIcon(uiPreset),
-                        contentDescription = "浏览全部分区",
-                        tint = skinPlainContentColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(actionIconSize)
-                    )
+                Box(
+                    modifier = Modifier
+                        .size(actionButtonSize)
+                        .then(
+                            if (skinPlainStyle) {
+                                Modifier
+                            } else {
+                                Modifier.clip(RoundedCornerShape(actionButtonCorner))
+                            }
+                        )
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = LocalIndication.current
+                        ) {
+                            performHomeTopBarTap(haptic = haptic, onClick = onPartitionClick)
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (!partitionSkinIconPath.isNullOrBlank()) {
+                        AsyncImage(
+                            model = File(partitionSkinIconPath),
+                            contentDescription = "浏览全部分区",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier.size(resolveTopTabSkinPartitionIconSize())
+                        )
+                    } else {
+                        Icon(
+                            resolveTopTabPartitionIcon(uiPreset),
+                            contentDescription = "浏览全部分区",
+                            tint = skinPlainContentColor ?: MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(actionIconSize)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+            }
         }
     }
 }
@@ -1154,8 +1182,9 @@ fun CategoryTabRow(
         androidNativeVariant = LocalAndroidNativeVariant.current,
         labelMode = labelMode
     )
+    val showPartitionAction = categoryKeys.none { it.equals(HOME_TOP_PARTITION_TAB_ID, ignoreCase = true) }
     val hasSkinStickerIcons = topTabSkinIconPaths.isNotEmpty() || !partitionSkinIconPath.isNullOrBlank()
-    if (!hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX) {
+    if (showPartitionAction && !hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX) {
         val haptic = com.android.purebilibili.core.util.rememberHapticFeedback()
         val scrollChannel = com.android.purebilibili.feature.home.LocalHomeScrollChannel.current
         MiuixCategoryTabRow(
@@ -1183,7 +1212,8 @@ fun CategoryTabRow(
         skinPlainStyle = skinPlainStyle,
         skinPlainContentColor = skinPlainContentColor,
         topTabSkinIconPaths = topTabSkinIconPaths,
-        partitionSkinIconPath = partitionSkinIconPath
+        partitionSkinIconPath = partitionSkinIconPath,
+        showPartitionAction = showPartitionAction
     )
 }
 

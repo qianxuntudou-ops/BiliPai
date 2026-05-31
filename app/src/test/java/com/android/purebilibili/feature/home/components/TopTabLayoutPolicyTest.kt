@@ -13,6 +13,7 @@ class TopTabLayoutPolicyTest {
         assertEquals(3, resolveTopTabVisibleSlots(3))
         assertEquals(4, resolveTopTabVisibleSlots(4))
         assertEquals(5, resolveTopTabVisibleSlots(5, longestLabelLength = 6))
+        assertEquals(6, resolveTopTabVisibleSlots(6, longestLabelLength = 2))
         assertEquals(4, resolveTopTabVisibleSlots(5, longestLabelLength = 9))
         assertEquals(4, resolveTopTabVisibleSlots(8, longestLabelLength = 10))
     }
@@ -48,6 +49,63 @@ class TopTabLayoutPolicyTest {
         assertEquals(96f, resolveMd3TopTabItemWidthDp(containerWidthDp = 320f), 0.001f)
         assertEquals(108f, resolveMd3TopTabItemWidthDp(containerWidthDp = 360f), 0.001f)
         assertEquals(120f, resolveMd3TopTabItemWidthDp(containerWidthDp = 640f), 0.001f)
+        assertEquals(60f, resolveMd3TopTabItemWidthDp(containerWidthDp = 360f, visibleSlots = 6), 0.001f)
+    }
+
+    @Test
+    fun `md3 top tabs show all text tabs when partition is an inline page`() {
+        assertEquals(
+            6,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 6,
+                labelMode = 2,
+                showPartitionAction = false
+            )
+        )
+        assertEquals(
+            5,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 5,
+                labelMode = 2,
+                showPartitionAction = false
+            )
+        )
+        assertEquals(
+            4,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 4,
+                labelMode = 2,
+                showPartitionAction = false
+            )
+        )
+    }
+
+    @Test
+    fun `md3 top tabs keep compact scrollable slots for icon modes or external partition action`() {
+        assertEquals(
+            3,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 6,
+                labelMode = 0,
+                showPartitionAction = false
+            )
+        )
+        assertEquals(
+            3,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 6,
+                labelMode = 1,
+                showPartitionAction = false
+            )
+        )
+        assertEquals(
+            3,
+            resolveMd3TopTabLayoutVisibleSlots(
+                categoryCount = 6,
+                labelMode = 2,
+                showPartitionAction = true
+            )
+        )
     }
 
     @Test

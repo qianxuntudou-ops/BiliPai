@@ -28,6 +28,25 @@ class HomeTopCategoryPolicyTest {
     }
 
     @Test
+    fun `top tab entries include partition as sixth default page`() {
+        assertEquals(
+            listOf(
+                HomeTopTabEntry.Category(HomeCategory.RECOMMEND),
+                HomeTopTabEntry.Category(HomeCategory.FOLLOW),
+                HomeTopTabEntry.Category(HomeCategory.POPULAR),
+                HomeTopTabEntry.Category(HomeCategory.LIVE),
+                HomeTopTabEntry.Category(HomeCategory.GAME),
+                HomeTopTabEntry.Partition
+            ),
+            resolveHomeTopTabEntries()
+        )
+        assertEquals(
+            listOf("RECOMMEND", "FOLLOW", "POPULAR", "LIVE", "GAME", "PARTITION"),
+            resolveDefaultHomeTopTabIds()
+        )
+    }
+
+    @Test
     fun `top categories should keep compact count for header readability`() {
         assertEquals(5, resolveHomeTopCategories().size)
     }
@@ -39,6 +58,15 @@ class HomeTopCategoryPolicyTest {
             assertEquals(index, resolveHomeTopTabIndex(category))
             assertEquals(category, resolveHomeCategoryForTopTab(index))
         }
+    }
+
+    @Test
+    fun `tab entry key and label should support partition`() {
+        val entries = resolveHomeTopTabEntries()
+
+        assertEquals(HomeTopTabEntry.Partition, resolveHomeTopTabEntryOrNull(entries, 5))
+        assertEquals(HomeCategory.entries.size, resolveHomeTopTabEntryKey(entries, 5))
+        assertEquals("分区", resolveHomeTopTabEntryLabel(HomeTopTabEntry.Partition))
     }
 
     @Test
@@ -56,6 +84,23 @@ class HomeTopCategoryPolicyTest {
                 HomeCategory.FOLLOW
             ),
             categories
+        )
+    }
+
+    @Test
+    fun `custom top tab entries should keep recommend pinned and partition visible`() {
+        val entries = resolveHomeTopTabEntries(
+            customOrderIds = listOf("PARTITION", "LIVE", "RECOMMEND"),
+            visibleIds = setOf("PARTITION", "LIVE")
+        )
+
+        assertEquals(
+            listOf(
+                HomeTopTabEntry.Category(HomeCategory.RECOMMEND),
+                HomeTopTabEntry.Partition,
+                HomeTopTabEntry.Category(HomeCategory.LIVE)
+            ),
+            entries
         )
     }
 

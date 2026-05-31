@@ -104,76 +104,101 @@ fun PartitionScreen(
             )
         }
     ) { paddingValues ->
-        Column(
+        PartitionContent(
+            contentPadding = PaddingValues(
+                top = paddingValues.calculateTopPadding() + 8.dp,
+                bottom = paddingValues.calculateBottomPadding() + 16.dp,
+                start = 16.dp,
+                end = 16.dp
+            ),
+            hazeState = hazeState,
+            onPartitionClick = onPartitionClick
+        )
+    }
+}
+
+/**
+ * 分区主体内容。独立页面和首页内嵌分区页共用，避免两套分区网格状态分叉。
+ */
+@Composable
+fun PartitionContent(
+    modifier: Modifier = Modifier,
+    contentPadding: PaddingValues = PaddingValues(
+        top = 8.dp,
+        bottom = 16.dp,
+        start = 16.dp,
+        end = 16.dp
+    ),
+    hazeState: HazeState? = null,
+    onPartitionClick: (Int, String) -> Unit = { _, _ -> }
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .globalWallpaperAwareBackground()
+            .responsiveContentWidth(maxWidth = 1000.dp)
+    ) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(minSize = 80.dp),
+            contentPadding = contentPadding,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
             modifier = Modifier
-                .fillMaxSize()
-                .globalWallpaperAwareBackground()
-                .responsiveContentWidth(maxWidth = 1000.dp) // 📐 [Tablet Adaptation] Limit content width
+                .weight(1f)
+                .then(
+                    if (hazeState != null) {
+                        Modifier.hazeSource(state = hazeState)
+                    } else {
+                        Modifier
+                    }
+                )
         ) {
-            //  分区网格
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 80.dp),
-                contentPadding = PaddingValues(
-                    // 顶部加上 TopBar 高度，底部保留原来的 padding
-                    top = paddingValues.calculateTopPadding() + 8.dp,
-                    bottom = paddingValues.calculateBottomPadding() + 16.dp, 
-                    start = 16.dp, 
-                    end = 16.dp
-                ),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp),
-                modifier = Modifier
-                    .weight(1f)
-                    .hazeSource(state = hazeState)
-            ) {
-                //  快捷访问 (作为 Grid 的一个 Item 或者 Header)
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Column {
-                        Text(
-                            text = "快捷访问",
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
-                        
-                        Surface(
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column {
+                    Text(
+                        text = "快捷访问",
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
+                    )
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { /* TODO: 编辑快捷访问 */ },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    ) {
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { /* TODO: 编辑快捷访问 */ },
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                .padding(16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "+ 编辑",
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = "+ 编辑",
+                                textAlign = TextAlign.Center,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
-                        
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        Text(
-                            text = "全部分区",
-                            modifier = Modifier.padding(vertical = 12.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 16.sp
-                        )
                     }
-                }
-                
-                items(allPartitions) { partition ->
-                    PartitionItem(
-                        partition = partition,
-                        onClick = { onPartitionClick(partition.id, partition.name) }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "全部分区",
+                        modifier = Modifier.padding(vertical = 12.dp),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp
                     )
                 }
+            }
+
+            items(allPartitions) { partition ->
+                PartitionItem(
+                    partition = partition,
+                    onClick = { onPartitionClick(partition.id, partition.name) }
+                )
             }
         }
     }

@@ -1,5 +1,19 @@
 package com.android.purebilibili.feature.home
 
+const val HOME_TOP_PARTITION_TAB_ID = "PARTITION"
+
+sealed interface HomeTopTabEntry {
+    val id: String
+
+    data class Category(val category: HomeCategory) : HomeTopTabEntry {
+        override val id: String = resolveHomeTopTabId(category)
+    }
+
+    data object Partition : HomeTopTabEntry {
+        override val id: String = HOME_TOP_PARTITION_TAB_ID
+    }
+}
+
 private val DEFAULT_HOME_TOP_CATEGORIES = listOf(
     HomeCategory.RECOMMEND,
     HomeCategory.FOLLOW,
@@ -7,6 +21,9 @@ private val DEFAULT_HOME_TOP_CATEGORIES = listOf(
     HomeCategory.LIVE,
     HomeCategory.GAME
 )
+
+private val DEFAULT_HOME_TOP_ENTRIES = DEFAULT_HOME_TOP_CATEGORIES
+    .map(HomeTopTabEntry::Category) + HomeTopTabEntry.Partition
 
 private val HOME_TOP_CUSTOMIZABLE_CATEGORIES = listOf(
     HomeCategory.RECOMMEND,
@@ -21,6 +38,12 @@ private val HOME_TOP_CUSTOMIZABLE_CATEGORIES = listOf(
 
 fun resolveHomeTopTabId(category: HomeCategory): String = category.name
 
+private fun resolveHomeTopEntryById(id: String): HomeTopTabEntry? {
+    val normalized = id.trim().uppercase()
+    if (normalized == HOME_TOP_PARTITION_TAB_ID) return HomeTopTabEntry.Partition
+    return resolveHomeTopCategoryById(normalized)?.let(HomeTopTabEntry::Category)
+}
+
 private fun resolveHomeTopCategoryById(id: String): HomeCategory? {
     val normalized = id.trim().uppercase()
     val category = HomeCategory.entries.find { it.name == normalized } ?: return null
@@ -28,7 +51,50 @@ private fun resolveHomeTopCategoryById(id: String): HomeCategory? {
 }
 
 fun resolveDefaultHomeTopTabIds(): List<String> {
-    return DEFAULT_HOME_TOP_CATEGORIES.map(::resolveHomeTopTabId)
+    return DEFAULT_HOME_TOP_ENTRIES.map { it.id }
+}
+
+fun resolveHomeTopTabEntries(
+    customOrderIds: List<String>? = null,
+    visibleIds: Set<String>? = null
+): List<HomeTopTabEntry> {
+    if (customOrderIds == null && visibleIds == null) {
+        return DEFAULT_HOME_TOP_ENTRIES
+    }
+
+    val resolvedVisible = visibleIds
+        ?.mapNotNull(::resolveHomeTopEntryById)
+        ?.toSet()
+        .orEmpty()
+    val effectiveVisible = if (resolvedVisible.isEmpty()) {
+        DEFAULT_HOME_TOP_ENTRIES.toSet()
+    } else {
+        resolvedVisible + HomeTopTabEntry.Category(HomeCategory.RECOMMEND)
+    }
+
+    val resolvedOrder = customOrderIds
+        ?.mapNotNull(::resolveHomeTopEntryById)
+        .orEmpty()
+
+    val customizableEntries = HOME_TOP_CUSTOMIZABLE_CATEGORIES
+        .map(HomeTopTabEntry::Category) + HomeTopTabEntry.Partition
+
+    val ordered = linkedSetOf<HomeTopTabEntry>()
+    resolvedOrder.forEach { entry ->
+        if (entry in effectiveVisible) ordered += entry
+    }
+    DEFAULT_HOME_TOP_ENTRIES.forEach { entry ->
+        if (entry in effectiveVisible) ordered += entry
+    }
+    customizableEntries.forEach { entry ->
+        if (entry in effectiveVisible) ordered += entry
+    }
+
+    if (ordered.isEmpty()) return DEFAULT_HOME_TOP_ENTRIES
+    val withoutRecommend = ordered.filterNot {
+        it is HomeTopTabEntry.Category && it.category == HomeCategory.RECOMMEND
+    }
+    return listOf(HomeTopTabEntry.Category(HomeCategory.RECOMMEND)) + withoutRecommend
 }
 
 fun resolveHomeTopCategories(
@@ -97,4 +163,30 @@ fun resolveHomeTopCategoryKey(
     index: Int
 ): Int {
     return resolveHomeTopCategoryOrNull(topCategories, index)?.ordinal ?: index
+}
+
+fun resolveHomeTopTabEntryOrNull(
+    entries: List<HomeTopTabEntry>,
+    index: Int
+): HomeTopTabEntry? {
+    if (entries.isEmpty()) return null
+    return entries.getOrNull(index)
+}
+
+fun resolveHomeTopTabEntryKey(
+    entries: List<HomeTopTabEntry>,
+    index: Int
+): Int {
+    return when (val entry = resolveHomeTopTabEntryOrNull(entries, index)) {
+        is HomeTopTabEntry.Category -> entry.category.ordinal
+        HomeTopTabEntry.Partition -> HomeCategory.entries.size
+        null -> HomeCategory.entries.size + index + 1
+    }
+}
+
+fun resolveHomeTopTabEntryLabel(entry: HomeTopTabEntry): String {
+    return when (entry) {
+        is HomeTopTabEntry.Category -> entry.category.label
+        HomeTopTabEntry.Partition -> "分区"
+    }
 }

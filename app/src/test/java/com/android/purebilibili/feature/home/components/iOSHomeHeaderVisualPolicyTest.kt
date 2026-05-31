@@ -1680,7 +1680,7 @@ class iOSHomeHeaderVisualPolicyTest {
         assertFalse(headerSource.contains("model = File(topTabBackgroundImagePath)"))
         assertFalse(headerSource.contains("val tabRowHeightDp = if (shouldUseSkinPlainTopTabs)"))
         assertTrue(topBarSource.contains("val effectiveRenderer = if (skinPlainStyle) HomeTopTabRenderer.MD3 else renderer"))
-        assertTrue(topBarSource.contains("if (!hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX)"))
+        assertTrue(topBarSource.contains("if (showPartitionAction && !hasSkinStickerIcons && !skinPlainStyle && presetStyle.renderer == HomeTopTabRenderer.MIUIX)"))
     }
 
     @Test

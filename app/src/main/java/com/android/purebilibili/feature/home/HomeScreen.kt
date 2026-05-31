@@ -135,6 +135,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.receiveAsFlow
 import com.android.purebilibili.data.model.response.VideoItem // [Fix] Import VideoItem
 import com.android.purebilibili.feature.home.components.VideoPreviewDialog // [Fix] Import VideoPreviewDialog
+import com.android.purebilibili.feature.partition.PartitionContent
 
 // [新增] 全局回顶事件通道
 val LocalHomeScrollChannel = compositionLocalOf<Channel<Unit>?> { null }
@@ -292,18 +293,21 @@ fun HomeScreen(
     )
     // [Refactor] Hoist PagerState to be available for both Content and Header
     // 确保 pagerState 在所有作用域均可见，以便传给 iOSHomeHeader
-    val topCategories = remember(topTabSettings) {
-        resolveHomeTopCategories(
+    val topTabEntries = remember(topTabSettings) {
+        resolveHomeTopTabEntries(
             customOrderIds = topTabSettings.orderIds,
             visibleIds = topTabSettings.visibleIds
         )
     }
-    val localizedTopCategoryLabels = topCategories.map { category ->
-        stringResource(resolveHomeCategoryLabelRes(category))
+    val localizedTopTabLabels = topTabEntries.map { entry ->
+        when (entry) {
+            is HomeTopTabEntry.Category -> stringResource(resolveHomeCategoryLabelRes(entry.category))
+            HomeTopTabEntry.Partition -> resolveHomeTopTabEntryLabel(entry)
+        }
     }
-    val initialPage = resolveHomeTopTabIndex(state.currentCategory, topCategories)
-    val pagerState = androidx.compose.foundation.pager.rememberPagerState(initialPage = initialPage) { topCategories.size }
-    var hasSyncedPagerWithState by remember(topCategories) { mutableStateOf(false) }
+    val initialPage = topTabEntries.indexOf(HomeTopTabEntry.Category(state.currentCategory)).takeIf { it >= 0 } ?: 0
+    val pagerState = androidx.compose.foundation.pager.rememberPagerState(initialPage = initialPage) { topTabEntries.size }
+    var hasSyncedPagerWithState by remember(topTabEntries) { mutableStateOf(false) }
     var programmaticPageSwitchInProgress by remember { mutableStateOf(false) }
     TrackJankStateFlag(
         stateName = "home:pager_swipe",
@@ -315,58 +319,55 @@ fun HomeScreen(
     )
 
     // [修复] 仅在完成首次“状态->Pager”对齐后，才允许“Pager->状态”反向同步，避免返回首页时误跳分类。
-    LaunchedEffect(pagerState, topCategories, hasSyncedPagerWithState, state.currentCategory) {
+    LaunchedEffect(pagerState, topTabEntries, hasSyncedPagerWithState, state.currentCategory) {
         if (!hasSyncedPagerWithState) return@LaunchedEffect
         snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
             .distinctUntilChanged()
             .collect { (page, scrolling) ->
-                val currentCategoryIndex = resolveHomeTopTabIndex(state.currentCategory, topCategories)
+                val currentCategoryIndex = topTabEntries
+                    .indexOf(HomeTopTabEntry.Category(state.currentCategory))
+                    .takeIf { it >= 0 } ?: 0
+                val settledEntry = resolveHomeTopTabEntryOrNull(topTabEntries, page)
+                val settledCategory = (settledEntry as? HomeTopTabEntry.Category)?.category
                 when (resolveHomePagerSettledAction(
                         hasSyncedPagerWithState = hasSyncedPagerWithState,
                         pagerCurrentPage = page,
                         pagerScrolling = scrolling,
                         currentCategoryIndex = currentCategoryIndex,
-                        settledCategory = resolveHomeCategoryForTopTab(
-                            index = page,
-                            topCategories = topCategories
-                        ),
+                        settledCategory = settledCategory,
                         programmaticPageSwitchInProgress = programmaticPageSwitchInProgress
                     )
                 ) {
                     HomePagerSettledAction.NONE -> return@collect
                     HomePagerSettledAction.SWITCH_CATEGORY -> {
-                        viewModel.switchCategory(
-                            resolveHomeCategoryForTopTab(
-                                index = page,
-                                topCategories = topCategories
-                            )
-                        )
+                        viewModel.switchCategory(settledCategory ?: return@collect)
                     }
                 }
             }
     }
 
     // [P2] 当前分类被隐藏时，自动落到首个可见分类
-    LaunchedEffect(topCategories) {
-        val firstVisible = topCategories.firstOrNull() ?: return@LaunchedEffect
-        if (state.currentCategory !in topCategories) {
+    LaunchedEffect(topTabEntries) {
+        val visibleCategories = topTabEntries.mapNotNull { (it as? HomeTopTabEntry.Category)?.category }
+        val firstVisible = visibleCategories.firstOrNull() ?: return@LaunchedEffect
+        if (state.currentCategory !in visibleCategories) {
             viewModel.updateDisplayedTabIndex(0)
             viewModel.switchCategory(firstVisible)
         }
     }
 
     // [CrashFix] 顶栏配置变化导致页数收缩时，先钳制 pager 当前页，避免越界
-    LaunchedEffect(topCategories.size) {
-        if (topCategories.isEmpty()) return@LaunchedEffect
-        val lastIndex = topCategories.lastIndex
+    LaunchedEffect(topTabEntries.size) {
+        if (topTabEntries.isEmpty()) return@LaunchedEffect
+        val lastIndex = topTabEntries.lastIndex
         if (pagerState.currentPage > lastIndex) {
             pagerState.scrollToPage(lastIndex)
         }
     }
 
     // [修复] 状态变化时驱动 Pager：首次使用无动画对齐，后续用动画跟随
-    LaunchedEffect(state.currentCategory, topCategories) {
-        val targetPage = topCategories.indexOf(state.currentCategory)
+    LaunchedEffect(state.currentCategory, topTabEntries) {
+        val targetPage = topTabEntries.indexOf(HomeTopTabEntry.Category(state.currentCategory))
         if (targetPage < 0) return@LaunchedEffect
         if (shouldUseInitialHomePagerSnap(
                 hasSyncedPagerWithState = hasSyncedPagerWithState,
@@ -1001,12 +1002,11 @@ fun HomeScreen(
         }
     }
     
-    // [P2] 优先按当前可见顶栏计算索引，避免自定义排序后高亮错位
-    val currentCategoryIndex = topCategories.indexOf(state.currentCategory)
-    val displayedTabIndex = if (currentCategoryIndex >= 0) {
-        currentCategoryIndex
-    } else {
-        state.displayedTabIndex.coerceIn(0, (topCategories.size - 1).coerceAtLeast(0))
+    // 选中槽位以 Pager 当前页为准，分区页不写入 currentCategory 也能保持高亮正确。
+    val displayedTabIndex by remember(pagerState, topTabEntries) {
+        derivedStateOf {
+            pagerState.currentPage.coerceIn(0, (topTabEntries.size - 1).coerceAtLeast(0))
+        }
     }
 
     //  根据滚动距离动态调整 BottomBar 可见性
@@ -1055,12 +1055,13 @@ fun HomeScreen(
     // Pixels
     val searchCollapseDistancePx = with(density) { searchCollapseDistanceDp.toPx() }
 
-    LaunchedEffect(pagerState, topCategories, searchCollapseDistancePx) {
+    LaunchedEffect(pagerState, topTabEntries, searchCollapseDistancePx) {
         snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
             .distinctUntilChanged()
             .collect { (page, scrolling) ->
                 if (scrolling) return@collect
-                val settledCategory = resolveHomeTopCategoryOrNull(topCategories, page) ?: return@collect
+                val settledEntry = resolveHomeTopTabEntryOrNull(topTabEntries, page)
+                val settledCategory = (settledEntry as? HomeTopTabEntry.Category)?.category ?: return@collect
                 val settledGridState = gridStates[settledCategory] ?: return@collect
                 val settledHeaderOffsetPx = resolveHomeHeaderOffsetForSettledPage(
                     firstVisibleItemIndex = settledGridState.firstVisibleItemIndex,
@@ -1236,9 +1237,22 @@ fun HomeScreen(
                             state = pagerState,
                             beyondViewportPageCount = 1, // [Optimization] Preload adjacent pages to prevent swipe lag
                             modifier = Modifier.fillMaxSize(),
-                            key = { index -> resolveHomeTopCategoryKey(topCategories, index) }
+                            key = { index -> resolveHomeTopTabEntryKey(topTabEntries, index) }
                         ) { page ->
-                        val category = resolveHomeTopCategoryOrNull(topCategories, page) ?: return@HorizontalPager
+                        when (val entry = resolveHomeTopTabEntryOrNull(topTabEntries, page)) {
+                            HomeTopTabEntry.Partition -> {
+                                PartitionContent(
+                                    contentPadding = PaddingValues(
+                                        top = listTopPadding,
+                                        bottom = homeListBottomPadding,
+                                        start = 16.dp,
+                                        end = 16.dp
+                                    ),
+                                    onPartitionClick = onCategoryClick
+                                )
+                            }
+                            is HomeTopTabEntry.Category -> {
+                        val category = entry.category
                         val categoryState = state.categoryStates[category] ?: com.android.purebilibili.feature.home.CategoryContent()
                         
                         //  独立的 PullToRefreshState，避免所有页面共享一个状态导致冲突
@@ -1508,6 +1522,9 @@ fun HomeScreen(
                              }
                              } // Close Box wrapper
                         }
+                            }
+                            null -> Unit
+                        }
                 } // Close HorizontalPager lambda
             } // Close Box wrapper
         } // Close Scaffold lambda
@@ -1595,29 +1612,30 @@ fun HomeScreen(
             onInboxClick = onInboxClick,
             topRightUnreadCount = state.messageUnreadCount,
             onSearchClick = onSearchClick,
-            topCategories = localizedTopCategoryLabels,
-            topCategoryKeys = topCategories.map { it.name },
+            topCategories = localizedTopTabLabels,
+            topCategoryKeys = topTabEntries.map { it.id },
             categoryIndex = displayedTabIndex,
-            onCategorySelected = { index ->
+            onCategorySelected = onCategorySelected@ { index ->
                 viewModel.updateDisplayedTabIndex(index)
-                topCategories.getOrNull(index)?.let { selectedCategory ->
-                    if (pagerState.currentPage != index) {
-                        programmaticPageSwitchInProgress = true
-                        coroutineScope.launch {
-                            try {
-                                pagerState.animateScrollToPage(
-                                    page = index,
-                                    animationSpec = tween(
-                                        durationMillis = 240,
-                                        easing = LinearOutSlowInEasing
-                                    )
+                val selectedEntry = topTabEntries.getOrNull(index) ?: return@onCategorySelected
+                if (pagerState.currentPage != index) {
+                    programmaticPageSwitchInProgress = true
+                    coroutineScope.launch {
+                        try {
+                            pagerState.animateScrollToPage(
+                                page = index,
+                                animationSpec = tween(
+                                    durationMillis = 240,
+                                    easing = LinearOutSlowInEasing
                                 )
-                            } finally {
-                                programmaticPageSwitchInProgress = false
-                            }
+                            )
+                        } finally {
+                            programmaticPageSwitchInProgress = false
                         }
                     }
-                    viewModel.switchCategory(selectedCategory)
+                }
+                if (selectedEntry is HomeTopTabEntry.Category) {
+                    viewModel.switchCategory(selectedEntry.category)
                 }
             },
             onPartitionClick = onPartitionClick,
