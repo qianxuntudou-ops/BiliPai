@@ -1085,7 +1085,6 @@ fun HomeScreen(
     //  根据滚动距离动态调整 BottomBar 可见性
     //  逻辑优化：使用 nestedScrollConnection 监听滚动
     var isHeaderVisible by rememberSaveable { mutableStateOf(true) }
-    var areTopTabsManuallyCollapsed by rememberSaveable { mutableStateOf(false) }
     
     // Constants
     val topTabStyle = remember(isBottomBarFloating, isHeaderBlurEnabled) {
@@ -1127,9 +1126,17 @@ fun HomeScreen(
     
     // Pixels
     val searchCollapseDistancePx = with(density) { searchCollapseDistanceDp.toPx() }
-    val isHeaderCollapseEnabled = homeSettings.isHeaderCollapseEnabled
+    val headerCollapseMode = homeSettings.homeHeaderCollapseMode
+    val collapseSearchOnScroll = headerCollapseMode.collapseSearch
+    val collapseTabsOnScroll = headerCollapseMode.collapseTabs
+    val isAnyHeaderCollapseEnabled = headerCollapseMode.hasAnyCollapse
+    val headerAutoCollapseDistancePx = when {
+        collapseSearchOnScroll -> searchCollapseDistancePx
+        collapseTabsOnScroll -> 1f
+        else -> 0f
+    }
 
-    LaunchedEffect(pagerState, topTabEntries, searchCollapseDistancePx, isHeaderCollapseEnabled) {
+    LaunchedEffect(pagerState, topTabEntries, headerAutoCollapseDistancePx, isAnyHeaderCollapseEnabled) {
         snapshotFlow { pagerState.currentPage to pagerState.isScrollInProgress }
             .distinctUntilChanged()
             .collect { (page, scrolling) ->
@@ -1137,11 +1144,11 @@ fun HomeScreen(
                 val settledEntry = resolveHomeTopTabEntryOrNull(topTabEntries, page)
                 val settledCategory = (settledEntry as? HomeTopTabEntry.Category)?.category ?: return@collect
                 val settledGridState = gridStates[settledCategory] ?: return@collect
-                val settledHeaderOffsetPx = if (isHeaderCollapseEnabled) {
+                val settledHeaderOffsetPx = if (isAnyHeaderCollapseEnabled) {
                     resolveHomeHeaderOffsetForSettledPage(
                         firstVisibleItemIndex = settledGridState.firstVisibleItemIndex,
                         firstVisibleItemScrollOffset = settledGridState.firstVisibleItemScrollOffset,
-                        maxHeaderCollapsePx = searchCollapseDistancePx
+                        maxHeaderCollapsePx = headerAutoCollapseDistancePx
                     )
                 } else {
                     0f
@@ -1152,12 +1159,12 @@ fun HomeScreen(
             }
     }
     
-    // 顶部搜索行可按设置随内容上滑收起；标签 dock 保持可见，便于继续切换分区。
-    val areTopTabsAutoCollapsed by remember(headerOffsetHeightPx, isHeaderCollapseEnabled) {
+    // 顶部搜索行与标签页分别由设置控制，避免一个开关隐式改变另一块区域。
+    val areTopTabsAutoCollapsed by remember(headerOffsetHeightPx, collapseTabsOnScroll) {
         derivedStateOf {
             resolveHomeTopTabsAutoCollapsed(
                 currentHeaderOffsetPx = headerOffsetHeightPx,
-                isHeaderCollapseEnabled = isHeaderCollapseEnabled
+                isTopTabAutoCollapseEnabled = collapseTabsOnScroll
             )
         }
     }
@@ -1181,7 +1188,8 @@ fun HomeScreen(
     }
 
     val nestedScrollConnection = remember(
-        isHeaderCollapseEnabled,
+        isAnyHeaderCollapseEnabled,
+        headerAutoCollapseDistancePx,
         isBottomBarAutoHideEnabled,
         useSideNavigation,
         isLiquidGlassEnabled,
@@ -1197,9 +1205,9 @@ fun HomeScreen(
                 val scrollUpdate = reduceHomePreScroll(
                     currentHeaderOffsetPx = headerOffsetHeightPx,
                     deltaY = available.y,
-                    minHeaderOffsetPx = -searchCollapseDistancePx,
+                    minHeaderOffsetPx = -headerAutoCollapseDistancePx,
                     canRevealHeader = canRevealHeader,
-                    isHeaderCollapseEnabled = isHeaderCollapseEnabled,
+                    isHeaderCollapseEnabled = isAnyHeaderCollapseEnabled,
                     isBottomBarAutoHideEnabled = isBottomBarAutoHideEnabled,
                     useSideNavigation = useSideNavigation,
                     liquidGlassEnabled = isLiquidGlassEnabled,
@@ -1742,15 +1750,16 @@ fun HomeScreen(
         )
         
         // Calculate parameters based on scroll
-        // 1. Search Bar Collapse (First phase)
-        val topTabsCollapsedForHeader = if (isHeaderCollapseEnabled && shouldCollapseHomeTopTabsWithSearchRow()) {
+        val topTabsCollapsedForHeader = if (collapseTabsOnScroll) {
             areTopTabsAutoCollapsed
         } else {
-            areTopTabsManuallyCollapsed
+            false
         }
         iOSHomeHeader(
             headerOffsetProvider = { headerOffsetHeightPx }, // [Optimization] Pass lambda to defer state read
-            isHeaderCollapseEnabled = isHeaderCollapseEnabled,
+            isHeaderCollapseEnabled = collapseSearchOnScroll,
+            isTopTabsAutoCollapseEnabled = collapseTabsOnScroll,
+            isTopTabsManualCollapseEnabled = false,
             user = state.user,
             onAvatarClick = {
                 when (
@@ -1820,11 +1829,7 @@ fun HomeScreen(
                 topTabsCollapsed = topTabsCollapsedForHeader
             ),
             topTabsCollapsed = topTabsCollapsedForHeader,
-            onTopTabsCollapsedChange = { collapsed ->
-                if (!isHeaderCollapseEnabled) {
-                    areTopTabsManuallyCollapsed = collapsed
-                }
-            },
+            onTopTabsCollapsedChange = {},
             motionTier = deviceUiProfile.motionTier,
             isScrolling = isFeedScrollInProgress,
             isTransitionRunning = isHeaderTransitionRunning,

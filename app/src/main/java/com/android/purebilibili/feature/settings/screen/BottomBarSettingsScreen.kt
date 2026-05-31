@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.android.purebilibili.R
 import com.android.purebilibili.core.store.HomeHeaderBlurMode
+import com.android.purebilibili.core.store.HomeHeaderCollapseMode
 import com.android.purebilibili.core.store.HomeTopLayoutOrder
 import com.android.purebilibili.core.store.HomeTopRightAction
 import com.android.purebilibili.core.store.SettingsManager
@@ -261,8 +262,8 @@ fun BottomBarSettingsContent(
         .collectAsState(initial = HomeHeaderBlurMode.FOLLOW_PRESET)
     val homeTopLayoutOrder by SettingsManager.getHomeTopLayoutOrder(context)
         .collectAsState(initial = HomeTopLayoutOrder.SEARCH_THEN_TABS)
-    val headerCollapseEnabled by SettingsManager.getHeaderCollapseEnabled(context)
-        .collectAsState(initial = true)
+    val homeHeaderCollapseMode by SettingsManager.getHomeHeaderCollapseMode(context)
+        .collectAsState(initial = HomeHeaderCollapseMode.SEARCH_ONLY)
     val homeTopRightAction by SettingsManager.getHomeTopRightAction(context)
         .collectAsState(initial = HomeTopRightAction.SETTINGS)
     val tabletUseSidebar by SettingsManager.getTabletUseSidebar(context).collectAsState(initial = false)
@@ -843,18 +844,80 @@ fun BottomBarSettingsContent(
 
                             HorizontalDivider()
 
-                            IOSSwitchItem(
-                                icon = CupertinoIcons.Outlined.ArrowUpArrowDown,
-                                title = "下滑折叠顶部搜索",
-                                subtitle = "列表下滑时收起搜索行，回到顶部后自动展开",
-                                checked = headerCollapseEnabled,
-                                onCheckedChange = { checked ->
-                                    scope.launch {
-                                        SettingsManager.setHeaderCollapseEnabled(context, checked)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    CupertinoIcons.Outlined.ArrowUpArrowDown,
+                                    contentDescription = null,
+                                    tint = com.android.purebilibili.core.theme.iOSBlue,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(16.dp))
+                                Column {
+                                    Text(
+                                        text = "下滑折叠顶部栏",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = homeHeaderCollapseMode.description,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(
+                                    HomeHeaderCollapseMode.SEARCH_ONLY,
+                                    HomeHeaderCollapseMode.TABS_ONLY,
+                                    HomeHeaderCollapseMode.BOTH,
+                                    HomeHeaderCollapseMode.OFF
+                                ).chunked(2).forEach { rowModes ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        rowModes.forEach { mode ->
+                                            val isSelected = homeHeaderCollapseMode == mode
+                                            Column(
+                                                modifier = Modifier
+                                                    .weight(1f)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clickable {
+                                                        scope.launch {
+                                                            SettingsManager.setHomeHeaderCollapseMode(context, mode)
+                                                        }
+                                                    }
+                                                    .background(
+                                                        if (isSelected) {
+                                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                                                        } else {
+                                                            Color.Transparent
+                                                        }
+                                                    )
+                                                    .heightIn(min = 48.dp)
+                                                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Text(
+                                                    text = mode.label,
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = if (isSelected) {
+                                                        MaterialTheme.colorScheme.primary
+                                                    } else {
+                                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                                    },
+                                                    fontWeight = if (isSelected) {
+                                                        FontWeight.SemiBold
+                                                    } else {
+                                                        FontWeight.Medium
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
-                                },
-                                iconTint = com.android.purebilibili.core.theme.iOSBlue
-                            )
+                                }
+                            }
 
                             HorizontalDivider()
 

@@ -384,6 +384,7 @@ data class HomeSettings(
     val liquidGlassMode: LiquidGlassMode = LiquidGlassMode.BALANCED,
     val liquidGlassStrength: Float = 0.52f,
     val liquidGlassProgress: Float = 0.5f,
+    val homeHeaderCollapseMode: HomeHeaderCollapseMode = HomeHeaderCollapseMode.SEARCH_ONLY,
     val isHeaderCollapseEnabled: Boolean = true,
     val gridColumnCount: Int = 0, // [New] 网格列数 (0=自动, 1-6=固定)
     val homeFeedCardWidthPreset: HomeFeedCardWidthPreset = HomeFeedCardWidthPreset.AUTO,
@@ -458,6 +459,30 @@ enum class HomeTopLayoutOrder(val value: Int, val label: String) {
     companion object {
         fun fromValue(value: Int): HomeTopLayoutOrder =
             entries.find { it.value == value } ?: SEARCH_THEN_TABS
+    }
+}
+
+enum class HomeHeaderCollapseMode(
+    val value: Int,
+    val label: String,
+    val description: String,
+    val collapseSearch: Boolean,
+    val collapseTabs: Boolean
+) {
+    SEARCH_ONLY(0, "仅搜索", "列表下滑时只收起搜索行，标签页保持显示", true, false),
+    TABS_ONLY(1, "仅标签", "列表下滑时只收起标签页，搜索行保持显示", false, true),
+    BOTH(2, "都折叠", "搜索行和标签页都会随列表下滑收起", true, true),
+    OFF(3, "都不折叠", "搜索行和标签页始终展开", false, false);
+
+    val hasAnyCollapse: Boolean
+        get() = collapseSearch || collapseTabs
+
+    companion object {
+        fun fromValue(value: Int): HomeHeaderCollapseMode =
+            entries.find { it.value == value } ?: SEARCH_ONLY
+
+        fun fromLegacyBoolean(value: Boolean): HomeHeaderCollapseMode =
+            if (value) SEARCH_ONLY else OFF
     }
 }
 
@@ -886,6 +911,7 @@ object SettingsManager {
     private val KEY_HEADER_BLUR_ENABLED = booleanPreferencesKey("header_blur_enabled")
     private val KEY_HOME_HEADER_BLUR_MODE = intPreferencesKey("home_header_blur_mode")
     private val KEY_HEADER_COLLAPSE_ENABLED = booleanPreferencesKey("header_collapse_enabled")
+    private val KEY_HOME_HEADER_COLLAPSE_MODE = intPreferencesKey("home_header_collapse_mode")
     private val KEY_HOME_TOP_LAYOUT_ORDER = intPreferencesKey("home_top_layout_order")
     private val KEY_BOTTOM_BAR_BLUR_ENABLED = booleanPreferencesKey("bottom_bar_blur_enabled")
     private val KEY_TOP_BAR_LIQUID_GLASS_ENABLED = booleanPreferencesKey("top_bar_liquid_glass_enabled")
@@ -986,6 +1012,11 @@ object SettingsManager {
             rawMode = preferences[KEY_HOME_HEADER_BLUR_MODE],
             legacyEnabled = preferences[KEY_HEADER_BLUR_ENABLED]
         )
+        val headerCollapseMode = preferences[KEY_HOME_HEADER_COLLAPSE_MODE]
+            ?.let(HomeHeaderCollapseMode::fromValue)
+            ?: HomeHeaderCollapseMode.fromLegacyBoolean(
+                preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true
+            )
         val legacyLiquidGlassEnabled = preferences[KEY_LIQUID_GLASS_ENABLED] ?: true
         return HomeSettings(
             displayMode = preferences[KEY_DISPLAY_MODE] ?: 0,
@@ -1000,7 +1031,6 @@ object SettingsManager {
             ),
             isHeaderBlurEnabled = headerBlurMode != HomeHeaderBlurMode.ALWAYS_OFF,
             headerBlurMode = headerBlurMode,
-            isHeaderCollapseEnabled = preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true,
             isBottomBarBlurEnabled = preferences[KEY_BOTTOM_BAR_BLUR_ENABLED] ?: true,
             isTopBarLiquidGlassEnabled = false,
             isBottomBarLiquidGlassEnabled = preferences[KEY_BOTTOM_BAR_LIQUID_GLASS_ENABLED] ?: legacyLiquidGlassEnabled,
@@ -1023,6 +1053,8 @@ object SettingsManager {
             liquidGlassMode = FIXED_LIQUID_GLASS_MODE,
             liquidGlassStrength = FIXED_LIQUID_GLASS_STRENGTH,
             liquidGlassProgress = FIXED_LIQUID_GLASS_PROGRESS,
+            homeHeaderCollapseMode = headerCollapseMode,
+            isHeaderCollapseEnabled = headerCollapseMode.hasAnyCollapse,
             gridColumnCount = preferences[KEY_GRID_COLUMN_COUNT] ?: 0,
             homeFeedCardWidthPreset = HomeFeedCardWidthPreset.fromValue(
                 preferences[KEY_HOME_FEED_CARD_WIDTH_PRESET] ?: HomeFeedCardWidthPreset.AUTO.value
@@ -2254,13 +2286,36 @@ object SettingsManager {
         }
     }
     
-    //  首页顶部栏自动收缩：下滑收起搜索行，回到列表顶部时展开。
+    //  首页顶部栏自动收缩：兼容旧布尔开关，同时支持搜索行/标签页独立折叠。
+    fun getHomeHeaderCollapseMode(context: Context): Flow<HomeHeaderCollapseMode> =
+        context.settingsDataStore.data.map { preferences ->
+            preferences[KEY_HOME_HEADER_COLLAPSE_MODE]
+                ?.let(HomeHeaderCollapseMode::fromValue)
+                ?: HomeHeaderCollapseMode.fromLegacyBoolean(
+                    preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true
+                )
+        }
+
+    suspend fun setHomeHeaderCollapseMode(context: Context, mode: HomeHeaderCollapseMode) {
+        context.settingsDataStore.edit { preferences ->
+            preferences[KEY_HOME_HEADER_COLLAPSE_MODE] = mode.value
+            preferences[KEY_HEADER_COLLAPSE_ENABLED] = mode.hasAnyCollapse
+        }
+    }
+
     fun getHeaderCollapseEnabled(context: Context): Flow<Boolean> = context.settingsDataStore.data
-        .map { preferences -> preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true }
+        .map { preferences ->
+            preferences[KEY_HOME_HEADER_COLLAPSE_MODE]
+                ?.let(HomeHeaderCollapseMode::fromValue)
+                ?.hasAnyCollapse
+                ?: (preferences[KEY_HEADER_COLLAPSE_ENABLED] ?: true)
+        }
 
     suspend fun setHeaderCollapseEnabled(context: Context, value: Boolean) {
         context.settingsDataStore.edit { preferences ->
             preferences[KEY_HEADER_COLLAPSE_ENABLED] = value
+            preferences[KEY_HOME_HEADER_COLLAPSE_MODE] =
+                HomeHeaderCollapseMode.fromLegacyBoolean(value).value
         }
     }
     
@@ -5388,6 +5443,7 @@ object SettingsManager {
             StringShareablePreferenceDefinition(KEY_BOTTOM_BAR_ITEM_COLORS, SettingsShareSection.NAVIGATION),
             IntShareablePreferenceDefinition(KEY_BOTTOM_BAR_VISIBILITY_MODE, SettingsShareSection.NAVIGATION),
             IntShareablePreferenceDefinition(KEY_HOME_TOP_LAYOUT_ORDER, SettingsShareSection.NAVIGATION),
+            IntShareablePreferenceDefinition(KEY_HOME_HEADER_COLLAPSE_MODE, SettingsShareSection.NAVIGATION),
             BooleanShareablePreferenceDefinition(KEY_HEADER_COLLAPSE_ENABLED, SettingsShareSection.NAVIGATION),
             BooleanShareablePreferenceDefinition(KEY_TABLET_NAVIGATION_MODE, SettingsShareSection.NAVIGATION),
             IntShareablePreferenceDefinition(KEY_DYNAMIC_PAGE_LAYOUT_DIRECTION, SettingsShareSection.NAVIGATION),

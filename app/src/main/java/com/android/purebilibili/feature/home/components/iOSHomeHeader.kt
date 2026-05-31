@@ -1497,6 +1497,8 @@ internal fun Modifier.homeTopChromeSurface(
 fun iOSHomeHeader(
     headerOffsetProvider: () -> Float, // [Optimization] Defer state read to prevent parent recomposition
     isHeaderCollapseEnabled: Boolean = true,
+    isTopTabsAutoCollapseEnabled: Boolean = false,
+    isTopTabsManualCollapseEnabled: Boolean = true,
     user: UserState,
     onAvatarClick: () -> Unit,
     onSettingsClick: () -> Unit,
@@ -1856,7 +1858,11 @@ fun iOSHomeHeader(
         targetValue = resolveHomeTopTabPresentationHeight(
             expandedHeight = expandedTabHeight,
             isCollapsed = topTabsVisible && topTabsCollapsed,
-            collapsedHandleHeight = if (isHeaderCollapseEnabled) 0.dp else resolveHomeTopCollapsedHandleHeight()
+            collapsedHandleHeight = if (isHeaderCollapseEnabled || isTopTabsAutoCollapseEnabled) {
+                0.dp
+            } else {
+                resolveHomeTopCollapsedHandleHeight()
+            }
         ),
         animationSpec = AppMotionTokens.standardSpec(),
         label = "currentTabHeight"
@@ -2108,7 +2114,10 @@ fun iOSHomeHeader(
                     softenWideChrome = true
                 )
             },
-            gestureEnabled = topTabsVisible && !isHeaderCollapseEnabled,
+            gestureEnabled = topTabsVisible &&
+                isTopTabsManualCollapseEnabled &&
+                !isHeaderCollapseEnabled &&
+                !isTopTabsAutoCollapseEnabled,
             isTabsCollapsed = topTabsCollapsed,
             onTabsCollapsedChange = onTopTabsCollapsedChange,
             drawChromeSurface = drawTopTabDockChrome,
