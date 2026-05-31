@@ -103,6 +103,8 @@ class PartitionScreenStructureTest {
         assertTrue(source.contains("indicatorOffsetPxProvider: () -> Float"))
         assertTrue(source.contains("indicatorTranslationYPx = indicatorOffsetPxProvider()"))
         assertTrue(source.contains("swapMotionAxes = true"))
+        assertTrue(source.contains("indicatorAlignment = Alignment.TopStart"))
+        assertTrue(source.contains("centerLayerOnIndicatorY = true"))
         assertFalse(source.contains("translationY = panelOffsetPx"))
         assertFalse(source.contains("val panelOffsetPx"))
     }

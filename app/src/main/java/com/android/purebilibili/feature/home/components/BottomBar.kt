@@ -3779,7 +3779,9 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     indicatorLayerScaleProgress: Float,
     bottomBarMotionSpec: com.android.purebilibili.core.ui.motion.BottomBarMotionSpec,
     isDarkTheme: Boolean,
-    swapMotionAxes: Boolean = false
+    swapMotionAxes: Boolean = false,
+    indicatorAlignment: Alignment = Alignment.CenterStart,
+    centerLayerOnIndicatorY: Boolean = false
 ) {
     if (!visible) return
     val rawIndicatorLayerTransform = if (glassEnabled) {
@@ -3803,6 +3805,11 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
     }
     val indicatorLayerWidth = indicatorWidth * indicatorLayerTransform.scaleX
     val indicatorLayerHeight = indicatorHeight * indicatorLayerTransform.scaleY
+    val indicatorLayerVerticalCenterOffset = if (centerLayerOnIndicatorY) {
+        (indicatorLayerHeight - indicatorHeight) / 2f
+    } else {
+        0.dp
+    }
     Box(
         modifier = Modifier
             .alpha(dockContentAlpha)
@@ -3810,13 +3817,13 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
                 translationX = indicatorTranslationXPx + indicatorPanelOffsetPx -
                     ((indicatorLayerWidth - indicatorWidth) / 2f).toPx()
                 translationY = indicatorTranslationYPx + indicatorPanelOffsetYPx -
-                    ((indicatorLayerHeight - indicatorHeight) / 2f).toPx()
+                    indicatorLayerVerticalCenterOffset.toPx()
                 scaleX = indicatorSettleReboundTransform.scaleX
                 scaleY = indicatorSettleReboundTransform.scaleY
             }
             .width(indicatorLayerWidth)
             .height(indicatorLayerHeight)
-            .align(Alignment.CenterStart)
+            .align(indicatorAlignment)
             .run {
                 val indicatorBackdrop = if (shouldUseBottomBarCombinedIndicatorBackdrop(liquidGlassPreset)) {
                     contentBackdrop

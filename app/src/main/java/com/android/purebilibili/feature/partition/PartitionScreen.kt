@@ -598,7 +598,9 @@ private fun PartitionSideRailMovingIndicator(
             indicatorLayerScaleProgress = indicatorDragScaleProgress,
             bottomBarMotionSpec = motionSpec,
             isDarkTheme = isDarkTheme,
-            swapMotionAxes = true
+            swapMotionAxes = true,
+            indicatorAlignment = Alignment.TopStart,
+            centerLayerOnIndicatorY = true
         )
     }
 }
