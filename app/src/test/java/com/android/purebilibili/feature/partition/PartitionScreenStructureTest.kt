@@ -77,6 +77,16 @@ class PartitionScreenStructureTest {
     }
 
     @Test
+    fun `side rail indicator uses layout offset without extra vertical drift`() {
+        val source = loadSource("app/src/main/java/com/android/purebilibili/feature/partition/PartitionScreen.kt")
+
+        assertTrue(source.contains("indicatorOffsetPxProvider: () -> Float"))
+        assertTrue(source.contains(".offset {\n                IntOffset("))
+        assertFalse(source.contains("translationY = panelOffsetPx"))
+        assertFalse(source.contains("val panelOffsetPx"))
+    }
+
+    @Test
     fun `side rail item color follows moving indicator position`() {
         assertTrue(resolvePartitionSideRailItemSelectionProgress(itemIndex = 3, indicatorPosition = 3f) == 1f)
         assertTrue(resolvePartitionSideRailItemSelectionProgress(itemIndex = 3, indicatorPosition = 3.5f) == 0.5f)

@@ -44,6 +44,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
@@ -100,7 +101,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.max
-import kotlin.math.sign
+import kotlin.math.roundToInt
 
 /**
  *  分区数据类
@@ -415,13 +416,7 @@ private fun PartitionSideRail(
         val itemSlotHeightPx = with(density) { (PartitionSideRailItemHeight + PartitionSideRailItemSpacing).toPx() }
         val contentTopPaddingPx = with(density) { contentPadding.calculateTopPadding().toPx() }
         val maxVideoPushPx = with(density) { PartitionVideoListMaxPush.toPx() }
-        val indicatorOffsetPx = remember(
-            dragState.value,
-            listState.firstVisibleItemIndex,
-            listState.firstVisibleItemScrollOffset,
-            contentTopPaddingPx,
-            itemSlotHeightPx
-        ) {
+        val currentIndicatorOffsetPxProvider = {
             resolvePartitionSideRailIndicatorOffsetPx(
                 indicatorPosition = dragState.value,
                 firstVisibleItemIndex = listState.firstVisibleItemIndex,
@@ -430,14 +425,12 @@ private fun PartitionSideRail(
                 itemSlotHeightPx = itemSlotHeightPx
             )
         }
-        val currentIndicatorOffsetPx by rememberUpdatedState(indicatorOffsetPx)
-        val indicatorOffsetY = with(density) { indicatorOffsetPx.toDp() }
         val railBackdrop = rememberLayerBackdrop()
 
         PartitionSideRailMovingIndicator(
             dragState = dragState,
             itemSlotHeightPx = itemSlotHeightPx,
-            indicatorOffsetY = indicatorOffsetY,
+            indicatorOffsetPxProvider = currentIndicatorOffsetPxProvider,
             liquidGlassIndicatorEnabled = liquidGlassIndicatorEnabled,
             backdrop = railBackdrop,
             maxVideoPushPx = maxVideoPushPx,
@@ -453,7 +446,7 @@ private fun PartitionSideRail(
                     dragState = dragState,
                     itemHeightPx = itemHeightPx,
                     itemSlotHeightPx = itemSlotHeightPx,
-                    currentIndicatorTopPx = { currentIndicatorOffsetPx },
+                    currentIndicatorTopPx = currentIndicatorOffsetPxProvider,
                     itemCount = partitions.size
                 ),
             contentPadding = contentPadding,
@@ -481,13 +474,12 @@ private fun PartitionSideRail(
 private fun PartitionSideRailMovingIndicator(
     dragState: DampedDragAnimationState,
     itemSlotHeightPx: Float,
-    indicatorOffsetY: androidx.compose.ui.unit.Dp,
+    indicatorOffsetPxProvider: () -> Float,
     liquidGlassIndicatorEnabled: Boolean,
     backdrop: com.kyant.backdrop.Backdrop,
     maxVideoPushPx: Float,
     onVideoListPushChanged: (Float) -> Unit
 ) {
-    val density = LocalDensity.current
     val shape = resolveSharedBottomBarCapsuleShape()
     val isDarkTheme = isSystemInDarkTheme()
     val motionSpec = remember { resolveSegmentedControlMotionSpec() }
@@ -517,16 +509,6 @@ private fun PartitionSideRailMovingIndicator(
     val indicatorDragScaleProgress = rememberBottomBarIndicatorDragScaleProgress(
         isDragging = dragState.isDragging
     )
-    val panelOffsetPx by remember(itemSlotHeightPx, density) {
-        derivedStateOf {
-            val fraction = (dragState.dragOffset / itemSlotHeightPx).coerceIn(-1f, 1f)
-            with(density) {
-                motionSpec.refraction.panelOffsetMaxDp.dp.toPx() *
-                    fraction.sign *
-                    EaseOut.transform(abs(fraction))
-            }
-        }
-    }
     val backdropPresetProgress = resolveBottomBarBackdropPresetProgress(
         motionProgress = motionProgress,
         verticalProgress = 0f,
@@ -545,9 +527,11 @@ private fun PartitionSideRailMovingIndicator(
 
     BottomBarLiquidIndicatorSurface(
         modifier = Modifier
-            .offset(y = indicatorOffsetY)
-            .graphicsLayer {
-                translationY = panelOffsetPx
+            .offset {
+                IntOffset(
+                    x = 0,
+                    y = indicatorOffsetPxProvider().roundToInt()
+                )
             }
             .fillMaxWidth()
             .height(PartitionSideRailItemHeight),
