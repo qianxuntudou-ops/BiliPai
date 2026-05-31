@@ -3808,8 +3808,8 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
             .graphicsLayer {
                 translationX = indicatorTranslationXPx + indicatorPanelOffsetPx
                 translationY = indicatorTranslationYPx + indicatorPanelOffsetYPx
-                scaleX = indicatorSettleReboundTransform.scaleX * indicatorLayerTransform.scaleX
-                scaleY = indicatorSettleReboundTransform.scaleY * indicatorLayerTransform.scaleY
+                scaleX = indicatorSettleReboundTransform.scaleX
+                scaleY = indicatorSettleReboundTransform.scaleY
             }
             .width(indicatorWidth)
             .height(indicatorHeight)
@@ -3868,6 +3868,12 @@ internal fun BoxScope.KernelSuBottomBarIndicatorLayer(
                                 radius = 8.dp * indicatorGlowAlpha,
                                 alpha = indicatorGlowAlpha
                             )
+                        },
+                        layerBlock = {
+                            if (glassEnabled) {
+                                scaleX = indicatorLayerTransform.scaleX
+                                scaleY = indicatorLayerTransform.scaleY
+                            }
                         }
                     )
                 } else {
