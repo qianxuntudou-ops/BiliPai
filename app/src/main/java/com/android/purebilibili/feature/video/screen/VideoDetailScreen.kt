@@ -106,6 +106,7 @@ import com.android.purebilibili.core.theme.LocalUiPreset
 
 import com.android.purebilibili.data.model.response.RelatedVideo
 import com.android.purebilibili.data.model.response.ReplyItem
+import com.android.purebilibili.data.model.response.UgcSeason
 import com.android.purebilibili.data.model.response.VideoTag
 import com.android.purebilibili.data.model.response.ViewInfo
 import com.android.purebilibili.data.model.response.ViewPoint
@@ -907,6 +908,22 @@ internal fun resolveAutoPlayOverrideForInternalBvidSync(
     return if (forceAutoPlay) true else null
 }
 
+internal fun shouldSwitchCollectionVideoInsideCurrentDetailPage(
+    targetBvid: String,
+    currentBvid: String,
+    ugcSeason: UgcSeason?
+): Boolean {
+    val normalizedTargetBvid = targetBvid.trim()
+    if (normalizedTargetBvid.isBlank() || normalizedTargetBvid == currentBvid.trim()) {
+        return false
+    }
+    return ugcSeason
+        ?.sections
+        .orEmpty()
+        .flatMap { section -> section.episodes }
+        .any { episode -> episode.bvid == normalizedTargetBvid } == true
+}
+
 internal data class VideoPlayerSectionTarget(
     val bvid: String,
     val entryCoverUrl: String
@@ -1141,6 +1158,7 @@ fun VideoDetailScreen(
     ) { mutableStateOf(false) }
     // 🔄 [Seamless Playback] Internal BVID state to support seamless switching in portrait mode
     var currentBvid by rememberSaveable(bvid) { mutableStateOf(bvid) }
+    var currentBvidCid by rememberSaveable { mutableLongStateOf(0L) }
 
     fun markSecondaryNavigationLeave(expectedBvid: String = currentBvid) {
         miniPlayerManager?.markLeavingByNavigation(expectedBvid = expectedBvid)
@@ -1161,12 +1179,30 @@ fun VideoDetailScreen(
         onSearchKeywordClick(keyword)
     }
 
+    fun switchVideoInCurrentDetailPage(
+        targetBvid: String,
+        targetCid: Long,
+        autoPlay: Boolean = true
+    ) {
+        val normalizedBvid = targetBvid.trim()
+        if (normalizedBvid.isBlank()) return
+        val safeCid = targetCid.coerceAtLeast(0L)
+        val success = uiState as? PlayerUiState.Success
+        if (success?.info?.bvid == normalizedBvid && (safeCid <= 0L || success.info.cid == safeCid)) {
+            return
+        }
+        currentBvid = normalizedBvid
+        currentBvidCid = safeCid
+        viewModel.loadVideo(
+            bvid = normalizedBvid,
+            cid = safeCid,
+            autoPlay = autoPlay
+        )
+    }
+
     val navigateToRelatedVideo = remember(onVideoClick, miniPlayerManager, uiState, currentBvid) {
         { targetBvid: String, options: android.os.Bundle? ->
-            isNavigatingToVideo = true
-            miniPlayerManager?.isNavigatingToVideo = true
             val success = uiState as? PlayerUiState.Success
-            markSecondaryNavigationLeave(expectedBvid = success?.info?.bvid ?: currentBvid)
             val explicitCid = options?.getLong(VIDEO_NAV_TARGET_CID_KEY) ?: 0L
             val resolvedCid = resolveNavigationTargetCid(
                 targetBvid = targetBvid,
@@ -1178,11 +1214,29 @@ fun VideoDetailScreen(
                 "VideoDetailScreen",
                 "navigateToRelatedVideo: current=${success?.info?.bvid ?: "unknown"} target=$targetBvid explicitCid=$explicitCid resolvedCid=$resolvedCid"
             )
-            val navOptions = android.os.Bundle(options ?: android.os.Bundle.EMPTY)
-            if (resolvedCid > 0L) {
-                navOptions.putLong(VIDEO_NAV_TARGET_CID_KEY, resolvedCid)
+            if (
+                shouldSwitchCollectionVideoInsideCurrentDetailPage(
+                    targetBvid = targetBvid,
+                    currentBvid = success?.info?.bvid ?: currentBvid,
+                    ugcSeason = success?.info?.ugc_season
+                )
+            ) {
+                miniPlayerManager?.isNavigatingToVideo = false
+                switchVideoInCurrentDetailPage(
+                    targetBvid = targetBvid,
+                    targetCid = resolvedCid,
+                    autoPlay = true
+                )
+            } else {
+                isNavigatingToVideo = true
+                miniPlayerManager?.isNavigatingToVideo = true
+                markSecondaryNavigationLeave(expectedBvid = success?.info?.bvid ?: currentBvid)
+                val navOptions = android.os.Bundle(options ?: android.os.Bundle.EMPTY)
+                if (resolvedCid > 0L) {
+                    navOptions.putLong(VIDEO_NAV_TARGET_CID_KEY, resolvedCid)
+                }
+                onVideoClick(targetBvid, navOptions)
             }
-            onVideoClick(targetBvid, navOptions)
         }
     }
 
@@ -2055,8 +2109,6 @@ fun VideoDetailScreen(
     var hasDeferredPortraitRestoreAfterExternalNavigation by rememberSaveable { mutableStateOf(false) }
     var pendingMainReloadBvidAfterPortrait by rememberSaveable { mutableStateOf<String?>(null) }
     var portraitPendingSelectionBvid by rememberSaveable { mutableStateOf<String?>(null) }
-    var currentBvidCid by rememberSaveable { mutableLongStateOf(0L) }
-
     // 初始化播放器状态
     val playerState = rememberVideoPlayerState(
         context = context,
@@ -4054,10 +4106,11 @@ fun VideoDetailScreen(
             onVideoSelected = { index, item ->
                 PlaylistManager.playAt(index)
                 showExternalPlaylistQueueSheet = false
-                val currentSuccess = uiState as? PlayerUiState.Success
-                if (currentSuccess?.info?.bvid != item.bvid) {
-                    viewModel.loadVideo(item.bvid, autoPlay = true)
-                }
+                switchVideoInCurrentDetailPage(
+                    targetBvid = item.bvid,
+                    targetCid = 0L,
+                    autoPlay = true
+                )
             }
         )
 

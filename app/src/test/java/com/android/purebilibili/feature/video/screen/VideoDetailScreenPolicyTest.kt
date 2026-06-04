@@ -1,8 +1,12 @@
 package com.android.purebilibili.feature.video.screen
 
+import com.android.purebilibili.data.model.response.UgcEpisode
+import com.android.purebilibili.data.model.response.UgcSeason
+import com.android.purebilibili.data.model.response.UgcSection
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class VideoDetailScreenPolicyTest {
@@ -55,23 +59,69 @@ class VideoDetailScreenPolicyTest {
     }
 
     @Test
-    fun secondaryNavigationCallbacks_markNavigationLeaveBeforeRouting() {
+    fun secondaryNavigationCallbacks_markExternalNavigationLeaveBeforeRouting() {
         val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
             .readText()
         val userSpaceSource = source.substringAfter("val navigateToUserSpaceFromVideo")
             .substringBefore("val navigateToSearchFromVideo")
-        val relatedVideoSource = source.substringAfter("val navigateToRelatedVideo")
-            .substringBefore("LaunchedEffect(bvid, cid)")
 
         assertTrue(
             userSpaceSource.contains("markSecondaryNavigationLeave()") &&
                 userSpaceSource.indexOf("markSecondaryNavigationLeave()") <
                 userSpaceSource.indexOf("onUpClick(mid)")
         )
+    }
+
+    @Test
+    fun videoNavigationInsideDetailSwitchesCurrentPageWithoutPushingRoute() {
+        val source = File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
+            .readText()
+        val relatedVideoSource = source.substringAfter("val navigateToRelatedVideo")
+            .substringBefore("LaunchedEffect(bvid, cid)")
+
+        assertTrue(relatedVideoSource.contains("shouldSwitchCollectionVideoInsideCurrentDetailPage("))
+        assertTrue(relatedVideoSource.contains("switchVideoInCurrentDetailPage("))
+        assertTrue(relatedVideoSource.contains("onVideoClick(targetBvid, navOptions)"))
         assertTrue(
-            relatedVideoSource.contains("markSecondaryNavigationLeave(expectedBvid = success?.info?.bvid ?: currentBvid)") &&
-                relatedVideoSource.indexOf("markSecondaryNavigationLeave") <
-                relatedVideoSource.indexOf("onVideoClick(targetBvid, navOptions)")
+            source.contains("currentBvid = normalizedBvid") &&
+                source.contains("currentBvidCid = safeCid") &&
+                source.contains("viewModel.loadVideo(")
+        )
+    }
+
+    @Test
+    fun collectionVideoNavigationSwitchesInsideCurrentDetailOnlyForSameCollection() {
+        val season = UgcSeason(
+            sections = listOf(
+                UgcSection(
+                    episodes = listOf(
+                        UgcEpisode(bvid = "BV1A", cid = 1001L),
+                        UgcEpisode(bvid = "BV2B", cid = 2002L)
+                    )
+                )
+            )
+        )
+
+        assertTrue(
+            shouldSwitchCollectionVideoInsideCurrentDetailPage(
+                targetBvid = "BV2B",
+                currentBvid = "BV1A",
+                ugcSeason = season
+            )
+        )
+        assertFalse(
+            shouldSwitchCollectionVideoInsideCurrentDetailPage(
+                targetBvid = "BV3C",
+                currentBvid = "BV1A",
+                ugcSeason = season
+            )
+        )
+        assertFalse(
+            shouldSwitchCollectionVideoInsideCurrentDetailPage(
+                targetBvid = "BV1A",
+                currentBvid = "BV1A",
+                ugcSeason = season
+            )
         )
     }
 
