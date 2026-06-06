@@ -3012,6 +3012,12 @@ fun VideoPlayerSection(
         var subtitleLargeTextByUser by rememberSaveable("${subtitleToggleKey}_large") {
             mutableStateOf(false)
         }
+        val subtitleTextSizeSpec = remember(uiLayoutWidthDp, subtitleLargeTextByUser) {
+            com.android.purebilibili.feature.video.subtitle.resolveSubtitleTextSizeSpec(
+                playerWidthDp = uiLayoutWidthDp,
+                largeTextEnabled = subtitleLargeTextByUser
+            )
+        }
         val subtitleDisplayModePreference = subtitleDisplayModePreferenceOverride ?: localSubtitleDisplayModePreference
         val applySubtitleDisplayModePreferenceChange: (SubtitleDisplayMode) -> Unit = remember(
             subtitleDisplayModePreferenceOverride,
@@ -3182,11 +3188,10 @@ fun VideoPlayerSection(
                     Text(
                         text = subtitleSecondaryText,
                         color = Color.White.copy(alpha = 0.88f),
-                        fontSize = when {
-                            secondaryAsPrimaryLine && subtitleLargeTextByUser -> 18.sp
-                            secondaryAsPrimaryLine -> 16.sp
-                            subtitleLargeTextByUser -> 16.sp
-                            else -> 14.sp
+                        fontSize = if (secondaryAsPrimaryLine) {
+                            subtitleTextSizeSpec.primarySp.sp
+                        } else {
+                            subtitleTextSizeSpec.secondarySp.sp
                         },
                         fontWeight = if (secondaryAsPrimaryLine) FontWeight.SemiBold else FontWeight.Normal,
                         maxLines = 2,
@@ -3198,7 +3203,7 @@ fun VideoPlayerSection(
                     Text(
                         text = subtitlePrimaryText,
                         color = Color.White,
-                        fontSize = if (subtitleLargeTextByUser) 18.sp else 16.sp,
+                        fontSize = subtitleTextSizeSpec.primarySp.sp,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
                         textAlign = TextAlign.Center,

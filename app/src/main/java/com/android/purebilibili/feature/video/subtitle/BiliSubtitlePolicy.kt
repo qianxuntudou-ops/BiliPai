@@ -77,6 +77,11 @@ data class SubtitleControlAvailability(
     val secondarySelectable: Boolean
 )
 
+data class SubtitleTextSizeSpec(
+    val primarySp: Int,
+    val secondarySp: Int
+)
+
 enum class SubtitleAutoPreference {
     OFF,
     ON,
@@ -189,6 +194,26 @@ fun buildSubtitleTrackOptions(
 
 fun normalizeSubtitleVerticalOffsetFraction(value: Float): Float {
     return value.coerceIn(-0.30f, 0.30f)
+}
+
+fun resolveSubtitleTextSizeSpec(
+    playerWidthDp: Int,
+    largeTextEnabled: Boolean
+): SubtitleTextSizeSpec {
+    return when {
+        playerWidthDp >= 840 -> SubtitleTextSizeSpec(
+            primarySp = if (largeTextEnabled) 26 else 22,
+            secondarySp = if (largeTextEnabled) 23 else 20
+        )
+        playerWidthDp >= 600 -> SubtitleTextSizeSpec(
+            primarySp = if (largeTextEnabled) 24 else 20,
+            secondarySp = if (largeTextEnabled) 21 else 18
+        )
+        else -> SubtitleTextSizeSpec(
+            primarySp = if (largeTextEnabled) 18 else 16,
+            secondarySp = if (largeTextEnabled) 16 else 14
+        )
+    }
 }
 
 private fun subtitleTrackPreferenceScore(track: SubtitleTrackMeta): Int {

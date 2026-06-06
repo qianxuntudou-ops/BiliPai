@@ -293,6 +293,34 @@ class BiliSubtitlePolicyTest {
     }
 
     @Test
+    fun subtitleTextSize_keepsExistingPhoneSizes() {
+        assertEquals(
+            SubtitleTextSizeSpec(primarySp = 16, secondarySp = 14),
+            resolveSubtitleTextSizeSpec(playerWidthDp = 599, largeTextEnabled = false)
+        )
+        assertEquals(
+            SubtitleTextSizeSpec(primarySp = 18, secondarySp = 16),
+            resolveSubtitleTextSizeSpec(playerWidthDp = 599, largeTextEnabled = true)
+        )
+    }
+
+    @Test
+    fun subtitleTextSize_increasesForTabletViewingDistance() {
+        assertEquals(
+            SubtitleTextSizeSpec(primarySp = 20, secondarySp = 18),
+            resolveSubtitleTextSizeSpec(playerWidthDp = 600, largeTextEnabled = false)
+        )
+        assertEquals(
+            SubtitleTextSizeSpec(primarySp = 24, secondarySp = 21),
+            resolveSubtitleTextSizeSpec(playerWidthDp = 600, largeTextEnabled = true)
+        )
+        assertEquals(
+            SubtitleTextSizeSpec(primarySp = 26, secondarySp = 23),
+            resolveSubtitleTextSizeSpec(playerWidthDp = 840, largeTextEnabled = true)
+        )
+    }
+
+    @Test
     fun resolveDefaultSubtitleDisplayMode_prefersBilingualWhenBothTracksAvailable() {
         assertEquals(
             SubtitleDisplayMode.BILINGUAL,
