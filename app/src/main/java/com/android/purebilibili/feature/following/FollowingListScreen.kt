@@ -54,6 +54,7 @@ import com.android.purebilibili.data.model.response.FollowingUser
 import com.android.purebilibili.data.model.response.RelationTagItem
 import com.android.purebilibili.data.repository.ActionRepository
 import io.github.alexzhirkevich.cupertino.CupertinoActivityIndicator
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
@@ -142,6 +143,17 @@ internal fun shouldUseFollowingPersistentCache(
     return cachedUsersCount > 0
 }
 
+internal fun resolveFollowingRefreshFailureState(
+    currentState: FollowingListUiState,
+    message: String
+): FollowingListUiState {
+    return if (currentState is FollowingListUiState.Success && currentState.users.isNotEmpty()) {
+        currentState.copy(isLoadingMore = false)
+    } else {
+        FollowingListUiState.Error(message)
+    }
+}
+
 internal fun isRetryableBatchOperationError(message: String?): Boolean {
     val text = message.orEmpty()
     if (text.isBlank()) return false
@@ -206,15 +218,15 @@ class FollowingListViewModel : ViewModel() {
         _userFollowGroupIds.value = emptyMap()
         _isFollowGroupMetaLoading.value = false
 
-        if (restoreFollowingListFromPersistentCache(mid, forceRefresh)) {
-            return
-        }
+        val restoredFromCache = restoreFollowingListFromPersistentCache(mid, forceRefresh)
         
         viewModelScope.launch {
-            _uiState.value = FollowingListUiState.Loading
+            if (!restoredFromCache) {
+                _uiState.value = FollowingListUiState.Loading
+            }
             
             try {
-                // 1. 加载第一页
+                // 缓存只负责首屏快速展示，服务器第一页始终作为最新关注关系的真源。
                 val response = NetworkModule.api.getFollowings(mid, pn = 1, ps = 50)
                 if (response.code == 0 && response.data != null) {
                     val initialUsers = response.data.list.orEmpty()
@@ -234,10 +246,22 @@ class FollowingListViewModel : ViewModel() {
                         loadAllRemainingPages(mid, total, initialUsers)
                     }
                 } else {
-                    _uiState.value = FollowingListUiState.Error("加载失败: ${response.message}")
+                    _uiState.update { current ->
+                        resolveFollowingRefreshFailureState(
+                            currentState = current,
+                            message = "加载失败: ${response.message}"
+                        )
+                    }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _uiState.value = FollowingListUiState.Error(e.message ?: "网络错误")
+                _uiState.update { current ->
+                    resolveFollowingRefreshFailureState(
+                        currentState = current,
+                        message = e.message ?: "网络错误"
+                    )
+                }
             }
         }
     }
@@ -461,18 +485,22 @@ class FollowingListViewModel : ViewModel() {
     }
 
     private fun persistFollowingCache(mid: Long, total: Int, users: List<FollowingUser>) {
-        if (mid <= 0L || users.isEmpty()) return
+        if (mid <= 0L) return
         val context = NetworkModule.appContext ?: return
         val snapshotUsers = users.toList()
 
         followingCacheSaveJob?.cancel()
         followingCacheSaveJob = viewModelScope.launch(Dispatchers.IO) {
-            FollowingCacheStore.saveSnapshot(
-                context = context,
-                mid = mid,
-                total = total,
-                users = snapshotUsers
-            )
+            if (snapshotUsers.isEmpty()) {
+                FollowingCacheStore.clear(context)
+            } else {
+                FollowingCacheStore.saveSnapshot(
+                    context = context,
+                    mid = mid,
+                    total = total,
+                    users = snapshotUsers
+                )
+            }
         }
     }
 
