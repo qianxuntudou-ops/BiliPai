@@ -661,6 +661,30 @@ class BottomBarIndicatorPolicyTest {
     }
 
     @Test
+    fun `blur only keeps capture surface neutral while indicator retains effects`() {
+        assertFalse(shouldUseBottomBarCaptureLens(liquidGlassEnabled = false))
+        assertTrue(shouldUseBottomBarCaptureLens(liquidGlassEnabled = true))
+        assertTrue(
+            resolveBottomBarIndicatorEffectsEnabled(
+                liquidGlassEnabled = false,
+                blurEnabled = true
+            )
+        )
+
+        val source = listOf(
+            java.io.File("app/src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt"),
+            java.io.File("src/main/java/com/android/purebilibili/feature/home/components/BottomBar.kt")
+        ).first { it.exists() }.readText()
+        val captureSource = source
+            .substringAfter("if (shouldRenderIndicatorContentCapture && miuixBackdrop != null) {")
+            .substringBefore("KernelSuMiuixBottomBarIndicatorLayer(")
+
+        assertTrue(captureSource.contains("if (shouldUseBottomBarCaptureLens(glassEnabled))"))
+        assertTrue(captureSource.contains("miuixBlur(4.dp.toPx(), 4.dp.toPx())"))
+        assertTrue(captureSource.contains("miuixLens("))
+    }
+
+    @Test
     fun `home vertical scroll does not scale bottom bar shell or capture layers`() {
         val progress = resolveBottomBarBackdropPresetProgress(
             motionProgress = 0f,

@@ -918,6 +918,10 @@ internal fun resolveBottomBarIndicatorEffectsEnabled(
     blurEnabled: Boolean
 ): Boolean = liquidGlassEnabled || blurEnabled
 
+internal fun shouldUseBottomBarCaptureLens(
+    liquidGlassEnabled: Boolean
+): Boolean = liquidGlassEnabled
+
 internal fun shouldUseAndroidNativeFloatingHazeBlur(
     blurEnabled: Boolean,
     glassEnabled: Boolean,
@@ -3479,12 +3483,16 @@ private fun KernelSuAlignedBottomBar(
                                 backdrop = miuixBackdrop,
                                 shape = { shellShape },
                                 effects = {
-                                    miuixVibrancy()
+                                    if (shouldUseBottomBarCaptureLens(glassEnabled)) {
+                                        miuixVibrancy()
+                                    }
                                     miuixBlur(4.dp.toPx(), 4.dp.toPx())
-                                    miuixLens(
-                                        refractionHeight = 24.dp.toPx(),
-                                        refractionAmount = 24.dp.toPx()
-                                    )
+                                    if (shouldUseBottomBarCaptureLens(glassEnabled)) {
+                                        miuixLens(
+                                            refractionHeight = 24.dp.toPx(),
+                                            refractionAmount = 24.dp.toPx()
+                                        )
+                                    }
                                 },
                                 onDrawSurface = {
                                     drawRect(ksuContainerColor)
