@@ -67,9 +67,13 @@ internal fun resolveLivePlaybackErrorRecovery(
 internal fun shouldRecoverUnexpectedLiveEnd(
     playbackState: Int,
     playWhenReady: Boolean,
+    isRoomLive: Boolean,
     isMiniLiveMode: Boolean
 ): Boolean {
-    return playbackState == Player.STATE_ENDED && playWhenReady && !isMiniLiveMode
+    return playbackState == Player.STATE_ENDED &&
+        playWhenReady &&
+        isRoomLive &&
+        !isMiniLiveMode
 }
 
 internal fun resolveLivePlayback(

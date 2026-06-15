@@ -175,6 +175,7 @@ fun LivePlayerScreen(
     val shieldInfo by viewModel.shieldInfo.collectAsStateWithLifecycle()
     val roomInfo = successState?.roomInfo ?: RoomInfo()
     val anchorInfo = successState?.anchorInfo ?: AnchorInfo()
+    val currentIsRoomLive by rememberUpdatedState(roomInfo.liveStatus == 1)
     val isPortraitLive = roomInfo.isPortrait
     val liveRoomTitle = roomInfo.title.ifBlank { title }
     val liveCoverForUi = roomInfo.background.ifBlank { roomInfo.cover }
@@ -495,6 +496,7 @@ fun LivePlayerScreen(
                 } else if (shouldRecoverUnexpectedLiveEnd(
                         playbackState = playbackState,
                         playWhenReady = exoPlayer.playWhenReady,
+                        isRoomLive = currentIsRoomLive,
                         isMiniLiveMode = isMiniLiveMode
                     )
                 ) {

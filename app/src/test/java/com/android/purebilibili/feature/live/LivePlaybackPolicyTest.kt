@@ -48,6 +48,7 @@ class LivePlaybackPolicyTest {
             shouldRecoverUnexpectedLiveEnd(
                 playbackState = Player.STATE_ENDED,
                 playWhenReady = true,
+                isRoomLive = true,
                 isMiniLiveMode = false
             )
         )
@@ -55,6 +56,7 @@ class LivePlaybackPolicyTest {
             shouldRecoverUnexpectedLiveEnd(
                 playbackState = Player.STATE_ENDED,
                 playWhenReady = false,
+                isRoomLive = true,
                 isMiniLiveMode = false
             )
         )
@@ -62,7 +64,16 @@ class LivePlaybackPolicyTest {
             shouldRecoverUnexpectedLiveEnd(
                 playbackState = Player.STATE_ENDED,
                 playWhenReady = true,
+                isRoomLive = true,
                 isMiniLiveMode = true
+            )
+        )
+        assertFalse(
+            shouldRecoverUnexpectedLiveEnd(
+                playbackState = Player.STATE_ENDED,
+                playWhenReady = true,
+                isRoomLive = false,
+                isMiniLiveMode = false
             )
         )
     }
