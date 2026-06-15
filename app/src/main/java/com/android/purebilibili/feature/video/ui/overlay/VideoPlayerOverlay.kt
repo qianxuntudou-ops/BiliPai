@@ -903,6 +903,9 @@ fun VideoPlayerOverlay(
     val progressState by produceState(
         initialValue = PlayerProgress(),
         player,
+        bvid,
+        cid,
+        videoDuration,
         isVisible,
         hostLifecycleStarted,
         hasPendingSeekResume,

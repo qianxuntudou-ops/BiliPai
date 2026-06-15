@@ -47,7 +47,7 @@ fun ChapterListPanel(
             .coerceAtLeast(0)
     }
     val listState = rememberLazyListState()
-    val nestedScrollConnection = rememberModalChildScrollConnection(listState)
+    val nestedScrollConnection = rememberModalChildScrollConnection()
     val surfaceInteractionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     
     // 点击背景关闭

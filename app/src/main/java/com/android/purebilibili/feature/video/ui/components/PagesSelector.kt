@@ -409,7 +409,7 @@ private fun PagesGrid(
         modifier.fillMaxSize()
     }
     val gridState = rememberLazyGridState()
-    val nestedScrollConnection = rememberModalChildScrollConnection(gridState)
+    val nestedScrollConnection = rememberModalChildScrollConnection()
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(gridColumns),

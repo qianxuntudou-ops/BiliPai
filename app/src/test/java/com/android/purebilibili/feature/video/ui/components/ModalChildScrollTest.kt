@@ -6,12 +6,12 @@ import kotlin.test.assertEquals
 class ModalChildScrollTest {
 
     @Test
-    fun `upward pointer movement scrolls modal content forward`() {
-        assertEquals(24f, resolveModalChildScrollDelta(availableY = -24f))
+    fun `upward remaining movement is consumed before reaching parent`() {
+        assertEquals(-24f, resolveModalRemainingScrollConsumption(availableY = -24f))
     }
 
     @Test
-    fun `downward pointer movement scrolls modal content backward`() {
-        assertEquals(-18f, resolveModalChildScrollDelta(availableY = 18f))
+    fun `downward remaining movement is consumed before reaching parent`() {
+        assertEquals(18f, resolveModalRemainingScrollConsumption(availableY = 18f))
     }
 }
