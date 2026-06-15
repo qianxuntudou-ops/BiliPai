@@ -468,21 +468,18 @@ fun LivePlayerScreen(
                     errorMessage = error.message ?: "unknown",
                     exception = error
                 )
-                val shouldFallback = when {
-                    error.cause is androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException -> {
-                        val cause = error.cause as androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException
-                        cause.responseCode in setOf(403, 404, 412, 500, 502, 503, 504)
+                val httpResponseCode =
+                    (error.cause as? androidx.media3.datasource.HttpDataSource.InvalidResponseCodeException)
+                        ?.responseCode
+                when (resolveLivePlaybackErrorRecovery(error.errorCode, httpResponseCode)) {
+                    LivePlaybackErrorRecovery.SEEK_TO_LIVE_EDGE -> {
+                        Logger.w(TAG, "直播播放落后于可用窗口，回到直播边缘")
+                        exoPlayer.seekToDefaultPosition()
+                        exoPlayer.prepare()
+                        exoPlayer.play()
                     }
-                    error.errorCode in setOf(
-                        androidx.media3.common.PlaybackException.ERROR_CODE_IO_BAD_HTTP_STATUS,
-                        androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED,
-                        androidx.media3.common.PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_TIMEOUT,
-                        androidx.media3.common.PlaybackException.ERROR_CODE_IO_UNSPECIFIED
-                    ) -> true
-                    else -> false
-                }
-                if (shouldFallback) {
-                    viewModel.tryNextUrl()
+                    LivePlaybackErrorRecovery.TRY_NEXT_SOURCE -> viewModel.tryNextUrl()
+                    LivePlaybackErrorRecovery.NONE -> Unit
                 }
             }
             override fun onIsPlayingChanged(playing: Boolean) {
@@ -491,9 +488,18 @@ fun LivePlayerScreen(
             }
             // 📺 [新增] 直播流结束时自动关闭小窗
             override fun onPlaybackStateChanged(playbackState: Int) {
-                if (playbackState == Player.STATE_ENDED && miniPlayerManager.isMiniMode && miniPlayerManager.isLiveMode) {
+                val isMiniLiveMode = miniPlayerManager.isMiniMode && miniPlayerManager.isLiveMode
+                if (playbackState == Player.STATE_ENDED && isMiniLiveMode) {
                     Logger.d(TAG, "📺 直播流结束，自动关闭小窗")
                     miniPlayerManager.dismiss()
+                } else if (shouldRecoverUnexpectedLiveEnd(
+                        playbackState = playbackState,
+                        playWhenReady = exoPlayer.playWhenReady,
+                        isMiniLiveMode = isMiniLiveMode
+                    )
+                ) {
+                    Logger.w(TAG, "直播流意外结束，尝试切换播放源")
+                    viewModel.tryNextUrl()
                 }
             }
         }

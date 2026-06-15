@@ -24,6 +24,8 @@ import java.nio.ByteBuffer
 import kotlin.math.min
 import kotlin.math.pow
 
+internal val LIVE_DANMAKU_AUTH_PROTOCOL_VERSION = DanmakuProtocol.PROTO_VER_BROTLI
+
 /**
  * Bilibili 直播弹幕 WebSocket 客户端
  * 
@@ -141,7 +143,7 @@ class LiveDanmakuClient(
         val authJson = JSONObject().apply {
             put("uid", uid) // 使用传入的真实 UID (未登录为 0)
             put("roomid", roomId)
-            put("protover", 2) // 降级为 Zlib (2)，避免 Brotli 兼容性问题
+            put("protover", LIVE_DANMAKU_AUTH_PROTOCOL_VERSION)
             put("platform", "web")
             put("type", 2)
             put("key", token)
