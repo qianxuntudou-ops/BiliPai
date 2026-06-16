@@ -810,11 +810,10 @@ fun SearchScreen(
                                     }
                                 }
                             )
-                            val showStableFilterBar = !searchPagerState.isScrollInProgress &&
-                                resolveSearchFilterControls(
-                                    currentType = state.searchType,
-                                    currentUpOrder = state.upOrder
-                                ).isNotEmpty()
+                            val showStableFilterBar = resolveSearchFilterControls(
+                                currentType = state.searchType,
+                                currentUpOrder = state.upOrder
+                            ).isNotEmpty()
                             AnimatedVisibility(
                                 visible = showStableFilterBar,
                                 enter = fadeIn(animationSpec = tween(90)),
