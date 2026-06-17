@@ -64,7 +64,7 @@ internal fun resolveHomeHeroCarouselCardTransform(
         cameraDistanceMultiplier = 8f,
         translationXFraction = clampedOffset * inFlightDistance * 0.56f,
         pivotFractionX = pivotFractionX,
-        zIndex = 1f - distance,
+        zIndex = 1f - distance + inFlightDistance * 2.4f,
         contentParallaxFraction = -clampedOffset * 0.08f,
         contentScale = 1f + distance * 0.06f,
         edgeShadeAlpha = distance * 0.28f,

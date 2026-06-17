@@ -95,6 +95,7 @@ class HomeHeroCarouselPolicyTest {
         assertTrue(abs(centered.edgeShadeAlpha) < 0.001f)
         assertTrue(abs(centered.shadowElevationFraction) < 0.001f)
         assertTrue(abs(centered.rotationZ) < 0.001f)
+        assertTrue(centered.zIndex >= 1f)
 
         val left = resolveHomeHeroCarouselCardTransform(-1f)
         val right = resolveHomeHeroCarouselCardTransform(1f)
@@ -128,6 +129,8 @@ class HomeHeroCarouselPolicyTest {
         assertTrue(draggingRight.rotationZ > 0f)
         assertTrue(abs(draggingLeft.rotationY) < abs(left.rotationY))
         assertTrue(abs(draggingLeft.rotationY) > abs(centered.rotationY))
+        assertTrue(draggingLeft.zIndex > centered.zIndex)
+        assertTrue(draggingRight.zIndex > centered.zIndex)
     }
 
     @Test
