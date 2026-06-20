@@ -25,6 +25,24 @@ class VideoDetailScreenMethodSizeStructureTest {
     }
 
     @Test
+    fun phoneSuccessContentLivesOutsideVideoDetailMainFile() {
+        val videoDetailSource = loadSource(
+            "app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt"
+        )
+        val phoneContentFile = listOf(
+            File("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailPhoneContent.kt"),
+            File("src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailPhoneContent.kt")
+        ).firstOrNull { it.exists() }
+
+        assertFalse(videoDetailSource.contains("private fun VideoDetailPhoneSuccessContentLayer("))
+        assertTrue(phoneContentFile != null)
+        assertTrue(
+            requireNotNull(phoneContentFile).readText()
+                .contains("internal fun VideoDetailPhoneSuccessContentLayer(")
+        )
+    }
+
+    @Test
     fun videoDetailScreenKeepsInlineCollapseStateBehindOneHolder() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/video/screen/VideoDetailScreen.kt")
         val videoDetailBody = source
