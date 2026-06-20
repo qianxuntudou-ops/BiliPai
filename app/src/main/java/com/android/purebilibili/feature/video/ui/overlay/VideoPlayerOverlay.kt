@@ -1321,7 +1321,7 @@ fun VideoPlayerOverlay(
         // --- 3.5 🔒 [新增] 屏幕锁定按钮 (仅全屏模式) ---
         if (isFullscreen && showFullscreenLockButton) {
             AnimatedVisibility(
-                visible = isVisible || isScreenLocked,  // 锁定时始终显示解锁按钮
+                visible = isVisible,  // 锁定后按控制栏状态自动隐藏
                 enter = fadeIn(tween(200)),
                 exit = fadeOut(tween(200)),
                 modifier = Modifier

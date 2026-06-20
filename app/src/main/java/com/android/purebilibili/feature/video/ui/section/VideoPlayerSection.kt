@@ -807,6 +807,12 @@ fun VideoPlayerSection(
     
     // 🔒 [新增] 屏幕锁定状态（全屏时防误触）
     var isScreenLocked by remember { mutableStateOf(false) }
+    LaunchedEffect(isScreenLocked, showControls) {
+        if (isScreenLocked && showControls) {
+            delay(2_000L)
+            showControls = false
+        }
+    }
     DisposableEffect(isFullscreen, isScreenLocked) {
         val shouldBlockAppScreenshot = isFullscreen && isScreenLocked
         AppScreenshotGestureBlockState.fullscreenPlayerLocked = shouldBlockAppScreenshot

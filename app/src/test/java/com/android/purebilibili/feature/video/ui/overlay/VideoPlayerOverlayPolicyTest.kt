@@ -435,6 +435,20 @@ class VideoPlayerOverlayPolicyTest {
     }
 
     @Test
+    fun fullscreenLockButton_hidesAfterLockAndCanBeRevealedAgain() {
+        val sectionSource = loadVideoPlayerSectionSource()
+        val overlaySource = loadVideoPlayerOverlaySource()
+        val lockButtonBlock = overlaySource
+            .substringAfter("// --- 3.5")
+            .substringBefore("if (isFullscreen && showFullscreenScreenshotButton)")
+
+        assertTrue(sectionSource.contains("LaunchedEffect(isScreenLocked, showControls)"))
+        assertTrue(sectionSource.contains("delay(2_000L)"))
+        assertTrue(lockButtonBlock.contains("visible = isVisible"))
+        assertFalse(lockButtonBlock.contains("visible = isVisible || isScreenLocked"))
+    }
+
+    @Test
     fun playbackDebugRows_includeAllReadableStatsAndSkipEmptyValues() {
         val rows = resolvePlaybackDebugRows(
             PlaybackDebugInfo(
@@ -879,6 +893,13 @@ class VideoPlayerOverlayPolicyTest {
         return listOf(
             File("app/src/main/java/com/android/purebilibili/feature/video/ui/overlay/VideoPlayerOverlay.kt"),
             File("src/main/java/com/android/purebilibili/feature/video/ui/overlay/VideoPlayerOverlay.kt")
+        ).first(File::exists).readText()
+    }
+
+    private fun loadVideoPlayerSectionSource(): String {
+        return listOf(
+            File("app/src/main/java/com/android/purebilibili/feature/video/ui/section/VideoPlayerSection.kt"),
+            File("src/main/java/com/android/purebilibili/feature/video/ui/section/VideoPlayerSection.kt")
         ).first(File::exists).readText()
     }
 }
