@@ -106,6 +106,28 @@ class TopTabLayoutPolicyTest {
     }
 
     @Test
+    fun `ios top tabs show all six tabs for every label mode`() {
+        listOf(0, 1, 2).forEach { labelMode ->
+            assertEquals(
+                6,
+                resolveIosTopTabLayoutVisibleSlots(
+                    categoryCount = 6,
+                    labelMode = labelMode
+                )
+            )
+            assertEquals(
+                60f,
+                resolveIosTopTabItemWidthDp(
+                    containerWidthDp = 360f,
+                    categoryCount = 6,
+                    labelMode = labelMode
+                ),
+                0.001f
+            )
+        }
+    }
+
+    @Test
     fun `md3 top tabs cap expanded custom tabs at six visible slots`() {
         assertEquals(
             6,

@@ -183,6 +183,24 @@ internal fun resolveMd3TopTabLayoutVisibleSlots(
     }
 }
 
+internal fun resolveIosTopTabLayoutVisibleSlots(
+    categoryCount: Int,
+    labelMode: Int
+): Int = resolveMd3TopTabLayoutVisibleSlots(
+    categoryCount = categoryCount,
+    labelMode = labelMode,
+    showPartitionAction = false
+)
+
+internal fun resolveIosTopTabItemWidthDp(
+    containerWidthDp: Float,
+    categoryCount: Int,
+    labelMode: Int
+): Float = resolveMd3TopTabItemWidthDp(
+    containerWidthDp = containerWidthDp,
+    visibleSlots = resolveIosTopTabLayoutVisibleSlots(categoryCount, labelMode)
+)
+
 internal fun resolveMd3TopTabItemWidthDp(
     containerWidthDp: Float,
     visibleSlots: Int = resolveMd3TopTabVisibleSlots()
@@ -836,11 +854,10 @@ private fun LightweightHomeTopTabs(
             )
         ) {
         val itemWidth = when (effectiveRenderer) {
-            HomeTopTabRenderer.IOS -> resolveTopTabItemWidthDp(
+            HomeTopTabRenderer.IOS -> resolveIosTopTabItemWidthDp(
                 containerWidthDp = maxWidth.value,
                 categoryCount = categories.size,
-                isFloatingStyle = isFloatingStyle,
-                longestLabelLength = categories.maxOfOrNull { it.length } ?: 0
+                labelMode = normalizedLabelMode
             ).dp
             HomeTopTabRenderer.MD3,
             HomeTopTabRenderer.MIUIX -> resolveMd3TopTabItemWidthDp(
