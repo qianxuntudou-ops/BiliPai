@@ -78,23 +78,7 @@ fun getIconGroups(): List<IconGroup> {
                 IconOption("icon_bilipai", "BiliPai", "全新品牌图标", R.mipmap.ic_launcher_bilipai_round),
                 IconOption("icon_bilipai_pink", "BiliPai 粉", "同款粉色", R.mipmap.ic_launcher_bilipai_pink_round),
                 IconOption("icon_bilipai_white", "BiliPai 白", "霜白配色", R.mipmap.ic_launcher_bilipai_white_round),
-                IconOption("icon_bilipai_monet", "BiliPai Monet", "跟随壁纸取色", R.mipmap.ic_launcher_bilipai_monet_round),
-                IconOption("Yuki", "比心少女", "经典二次元", R.mipmap.ic_launcher_round),
-                IconOption("icon_anime", "蓝发电视", "bilibili风格", R.mipmap.ic_launcher_anime),
-                IconOption("Headphone", "耳机少女", "经典头像", R.mipmap.ic_launcher_headphone)
-            )
-        ),
-        IconGroup(
-            title = "经典设计",
-            icons = listOf(
-                IconOption("icon_flat", "扁平", "现代极简", R.mipmap.ic_launcher_flat_round),
-            )
-        ),
-        IconGroup(
-            title = "Telegram 风格",
-            icons = listOf(
-                IconOption("icon_telegram_blue", "纸飞机蓝", "Telegram 蓝", R.mipmap.ic_launcher_telegram_blue_round),
-                IconOption("icon_telegram_dark", "暗夜蓝", "Telegram 黑", R.mipmap.ic_launcher_telegram_dark_round),
+                IconOption("icon_bilipai_monet", "BiliPai Monet", "跟随壁纸取色", R.mipmap.ic_launcher_bilipai_monet_round)
             )
         )
     )

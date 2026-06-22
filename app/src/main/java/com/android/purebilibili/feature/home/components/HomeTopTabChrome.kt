@@ -145,7 +145,6 @@ internal fun HomeTopTabChrome(
                             Modifier.homeTopBottomBarMatchedSurface(
                                 renderMode = tabChromeRenderMode,
                                 shape = tabShape,
-                                clipContent = false,
                                 hazeState = hazeState,
                                 backdrop = backdrop,
                                 liquidGlassStyle = liquidStyle,
@@ -212,12 +211,16 @@ internal fun HomeTopTabChrome(
                     )
                 }
             }
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                content()
-            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = safeTabHorizontalPadding, vertical = safeTabVerticalPadding)
+                .graphicsLayer { alpha = tabContentAlpha },
+            contentAlignment = Alignment.Center
+        ) {
+            content()
         }
 
         if (showCollapsedHandle) {

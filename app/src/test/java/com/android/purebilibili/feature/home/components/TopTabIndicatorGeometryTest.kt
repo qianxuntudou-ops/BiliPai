@@ -190,6 +190,20 @@ class TopTabIndicatorGeometryTest {
     }
 
     @Test
+    fun `top tab dock indicator keeps bottom bar capsule aspect ratio`() {
+        assertEquals(
+            33.75f,
+            resolveTopTabDockIndicatorHeightDp(
+                rowHeightDp = 52f,
+                verticalGapDp = 2f,
+                minHeightDp = 2f,
+                indicatorWidthDp = 54f
+            ),
+            0.01f
+        )
+    }
+
+    @Test
     fun `top tab dock indicator translation starts after inner gap`() {
         val horizontalGap = resolveTopTabDockIndicatorHorizontalGapDp(
             hasOuterChromeSurface = true

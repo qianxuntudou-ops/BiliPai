@@ -31,7 +31,7 @@ class AppIconAliasMappingTest {
             resolveAppIconLauncherAlias(packageName, "BiliPai Monet")
         )
         assertEquals(
-            "com.android.purebilibili.MainActivityAliasHeadphone",
+            "com.android.purebilibili.MainActivityAlias3DLauncher",
             resolveAppIconLauncherAlias(packageName, "icon_headphone")
         )
         assertEquals(

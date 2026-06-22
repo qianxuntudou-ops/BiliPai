@@ -993,7 +993,6 @@ internal fun shouldUseAndroidNativeFloatingHazeBlur(
 
 internal fun Modifier.kernelSuFloatingDockSurface(
     shape: androidx.compose.ui.graphics.Shape,
-    clipContent: Boolean = true,
     backdrop: Backdrop?,
     containerColor: Color,
     blurEnabled: Boolean,
@@ -1151,7 +1150,7 @@ internal fun Modifier.kernelSuFloatingDockSurface(
                 background(containerColor, shape)
             }
         }
-        .then(if (clipContent) Modifier.clip(shape) else Modifier)
+        .clip(shape)
 }
 
 @Composable

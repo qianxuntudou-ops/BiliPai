@@ -21,6 +21,7 @@ import com.android.purebilibili.core.theme.AppFontSizePreset
 import com.android.purebilibili.core.theme.AppUiScalePreset
 import com.android.purebilibili.core.theme.AndroidNativeVariant
 import com.android.purebilibili.core.theme.UiPreset
+import com.android.purebilibili.core.theme.syncThemeRoleControlAccent
 import com.android.purebilibili.core.ui.blur.BlurIntensity
 import com.android.purebilibili.core.util.CacheClearTarget
 import com.android.purebilibili.core.util.CacheUtils
@@ -32,6 +33,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -661,7 +663,15 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { SettingsManager.setMd3ColorSource(context, source) }
     }
     fun setMd3CustomColorHex(hex: String) {
-        viewModelScope.launch { SettingsManager.setMd3CustomColorHex(context, hex) }
+        viewModelScope.launch {
+            val normalizedHex = normalizeMd3CustomColorHex(hex)
+            SettingsManager.setMd3CustomColorHex(context, normalizedHex)
+            val overrides = SettingsManager.getThemeRoleOverrides(context).first()
+            val syncedOverrides = syncThemeRoleControlAccent(overrides, normalizedHex)
+            if (syncedOverrides != overrides) {
+                SettingsManager.setThemeRoleOverrides(context, syncedOverrides)
+            }
+        }
     }
     fun setThemeColorStyle(style: PaletteStyle) {
         viewModelScope.launch { SettingsManager.setThemeColorStyle(context, style) }

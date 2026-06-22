@@ -70,4 +70,24 @@ class ThemeRoleOverridePolicyTest {
         assertEquals("#A8C9CE", result.dark.secondaryTextHex)
         assertEquals("#4FD8EA", result.dark.controlAccentHex)
     }
+
+    @Test
+    fun customThemeColor_updatesEnabledAdvancedControlColors() {
+        val overrides = ThemeRoleOverrides(
+            enabled = true,
+            light = ThemeModeRoleOverrides("#FFFFFF", "#111111", "#555555", "#0061A4"),
+            dark = ThemeModeRoleOverrides("#000000", "#EEEEEE", "#AAAAAA", "#4FD8EA")
+        )
+
+        val result = syncThemeRoleControlAccent(overrides, "#FA7298")
+
+        assertEquals("#FA7298", result.light.controlAccentHex)
+        assertEquals("#FA7298", result.dark.controlAccentHex)
+        assertEquals("#FFFFFF", result.light.backgroundHex)
+        assertEquals("#000000", result.dark.backgroundHex)
+        assertEquals(
+            ThemeRoleOverrides(),
+            syncThemeRoleControlAccent(ThemeRoleOverrides(), "#FA7298")
+        )
+    }
 }

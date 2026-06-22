@@ -59,6 +59,26 @@ class TopTabMotionVelocityTest {
     }
 
     @Test
+    fun `direct drag does not apply velocity deformation twice`() {
+        assertEquals(
+            0f,
+            resolveTopTabIndicatorLayerVelocityItemsPerSecond(
+                topTabDragActive = true,
+                motionVelocityItemsPerSecond = 4f
+            ),
+            0.001f
+        )
+        assertEquals(
+            4f,
+            resolveTopTabIndicatorLayerVelocityItemsPerSecond(
+                topTabDragActive = false,
+                motionVelocityItemsPerSecond = 4f
+            ),
+            0.001f
+        )
+    }
+
+    @Test
     fun `vertical motion alone does not mark interacting when liquid glass enabled`() {
         val interacting = shouldTopTabIndicatorBeInteracting(
             pagerIsScrolling = false,
@@ -245,14 +265,14 @@ class TopTabMotionVelocityTest {
     }
 
     @Test
-    fun `top tab long press drag is attached to selected item instead of lazy row scroll container`() {
+    fun `top tab drag is attached to selected item instead of lazy row scroll container`() {
         val source = loadSource("app/src/main/java/com/android/purebilibili/feature/home/components/TopBar.kt")
         val lazyRowSource = source
             .substringAfter("LazyRow(")
             .substringBefore("itemsIndexed(")
 
-        assertTrue(source.contains("topTabSelectedItemLongPressDrag("))
-        assertFalse(lazyRowSource.contains("topTabSelectedItemLongPressDrag("))
+        assertTrue(source.contains("topTabSelectedItemDrag("))
+        assertFalse(lazyRowSource.contains("topTabSelectedItemDrag("))
     }
 
     @Test

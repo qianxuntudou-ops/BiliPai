@@ -1,26 +1,23 @@
 package com.android.purebilibili.feature.settings
 
 import kotlin.test.Test
-import kotlin.test.assertTrue
+import kotlin.test.assertEquals
 
 class IconGroupsTest {
 
     @Test
-    fun getIconGroups_containsBiliPaiAndHeadphone_withoutRemovedOptions() {
+    fun getIconGroups_onlyContainsCurrentBrandIcons() {
         val keys = getIconGroups().flatMap { group -> group.icons }.map { option -> option.key }.toSet()
 
-        assertTrue(keys.contains("icon_bilipai"))
-        assertTrue(keys.contains("icon_bilipai_pink"))
-        assertTrue(keys.contains("icon_bilipai_white"))
-        assertTrue(keys.contains("icon_bilipai_monet"))
-        assertTrue(keys.contains("Headphone"))
-        kotlin.test.assertFalse(keys.contains("icon_blue"))
-        kotlin.test.assertFalse(keys.contains("icon_neon"))
-        kotlin.test.assertFalse(keys.contains("icon_telegram_blue_coin"))
-        kotlin.test.assertFalse(keys.contains("icon_telegram_green"))
-        kotlin.test.assertFalse(keys.contains("icon_telegram_pink"))
-        kotlin.test.assertFalse(keys.contains("icon_telegram_purple"))
-        kotlin.test.assertFalse(keys.contains("icon_flat_material"))
-        kotlin.test.assertFalse(keys.contains("icon_retro"))
+        assertEquals(
+            setOf(
+                "icon_3d",
+                "icon_bilipai",
+                "icon_bilipai_pink",
+                "icon_bilipai_white",
+                "icon_bilipai_monet"
+            ),
+            keys
+        )
     }
 }

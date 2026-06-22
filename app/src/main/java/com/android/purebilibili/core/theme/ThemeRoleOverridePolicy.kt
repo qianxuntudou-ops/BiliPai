@@ -32,6 +32,17 @@ internal fun themeRoleOverridesFromSchemes(
     )
 }
 
+internal fun syncThemeRoleControlAccent(
+    overrides: ThemeRoleOverrides,
+    customColorHex: String
+): ThemeRoleOverrides {
+    if (!overrides.enabled) return overrides
+    return overrides.copy(
+        light = overrides.light.copy(controlAccentHex = customColorHex),
+        dark = overrides.dark.copy(controlAccentHex = customColorHex)
+    )
+}
+
 internal fun applyThemeRoleOverrides(
     scheme: ColorScheme,
     overrides: ThemeRoleOverrides,

@@ -140,13 +140,17 @@ internal fun resolveTopTabDockIndicatorWidthDp(
 internal fun resolveTopTabDockIndicatorHeightDp(
     rowHeightDp: Float,
     verticalGapDp: Float,
-    minHeightDp: Float
+    minHeightDp: Float,
+    indicatorWidthDp: Float = Float.POSITIVE_INFINITY
 ): Float {
     if (rowHeightDp <= 0f) return 0f
     val maxHeight = (rowHeightDp - verticalGapDp.coerceAtLeast(0f) * 2f)
         .coerceAtLeast(0f)
     val minHeight = minHeightDp.coerceIn(0f, rowHeightDp)
-    return maxHeight.coerceAtLeast(minHeight)
+    return resolveSegmentedControlIndicatorHeightDp(
+        slotWidthDp = indicatorWidthDp,
+        indicatorHeightDp = maxHeight
+    ).coerceAtLeast(minHeight)
 }
 
 internal fun resolveTopTabDockIndicatorOffsetPx(
@@ -635,7 +639,6 @@ internal fun resolveIosTopTabCapsuleContainerColor(
 internal fun Modifier.homeTopBottomBarMatchedSurface(
     renderMode: HomeTopChromeRenderMode,
     shape: Shape,
-    clipContent: Boolean = true,
     hazeState: HazeState?,
     backdrop: LayerBackdrop?,
     liquidGlassStyle: LiquidGlassStyle,
@@ -663,7 +666,6 @@ internal fun Modifier.homeTopBottomBarMatchedSurface(
     }
     this.kernelSuFloatingDockSurface(
         shape = shape,
-        clipContent = clipContent,
         backdrop = backdrop,
         containerColor = containerColor,
         blurEnabled = isBlurEnabled,
@@ -868,11 +870,6 @@ private fun LightweightHomeTopTabs(
         val dockIndicatorVerticalGap = resolveTopTabDockIndicatorVerticalGapDp(
             hasOuterChromeSurface = hasOuterChromeSurface
         ).dp
-        val dockIndicatorHeight = resolveTopTabDockIndicatorHeightDp(
-            rowHeightDp = rowHeight.value,
-            verticalGapDp = dockIndicatorVerticalGap.value,
-            minHeightDp = if (hasOuterChromeSurface) 2f else 30f
-        ).dp
         val md3TopTabRowVerticalTranslationPx = with(density) {
             resolveMd3TopTabRowVerticalTranslationDp(
                 skinPlainStyle = skinPlainStyle,
@@ -935,6 +932,11 @@ private fun LightweightHomeTopTabs(
         } else {
             topTabPagerVelocityItemsPerSecond
         }
+        val topTabIndicatorLayerVelocityItemsPerSecond =
+            resolveTopTabIndicatorLayerVelocityItemsPerSecond(
+                topTabDragActive = topTabDragActive,
+                motionVelocityItemsPerSecond = topTabMotionVelocityItemsPerSecond
+            )
         val topTabMotionVelocityPxPerSecond = with(density) {
             if (topTabDragActive) {
                 topTabDragState.velocityPxPerSecond
@@ -961,7 +963,7 @@ private fun LightweightHomeTopTabs(
         )
         val topTabIndicatorLayerTransform = resolveBottomBarIndicatorLayerTransform(
             motionProgress = topTabPressProgress,
-            velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
+            velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
             isDragging = topTabShouldStretchIndicator,
             dragScaleProgress = topTabIndicatorLayerScaleProgress,
             dragScaleTransform = if (topTabDragActive) {
@@ -1030,6 +1032,12 @@ private fun LightweightHomeTopTabs(
             itemWidthDp = itemWidth.value,
             horizontalGapDp = dockIndicatorHorizontalGap.value,
             minWidthDp = md3IndicatorWidth.value
+        ).dp
+        val dockIndicatorHeight = resolveTopTabDockIndicatorHeightDp(
+            rowHeightDp = rowHeight.value,
+            verticalGapDp = dockIndicatorVerticalGap.value,
+            minHeightDp = if (hasOuterChromeSurface) 2f else 30f,
+            indicatorWidthDp = md3LiquidCapsuleWidth.value
         ).dp
         val md3LiquidCapsuleTranslationXPx by remember(
             topTabIndicatorPosition,
@@ -1193,7 +1201,7 @@ private fun LightweightHomeTopTabs(
                         glassEnabled = shouldUseLiquidGlassIndicator,
                         indicatorEffectsEnabled = shouldUseLiquidGlassIndicator,
                         motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
+                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
                         isDragging = topTabShouldStretchIndicator,
                         indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                         indicatorLayerScaleTransform = if (topTabDragActive) {
@@ -1225,7 +1233,7 @@ private fun LightweightHomeTopTabs(
                         ),
                         glassEnabled = true,
                         motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
+                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
                         isDragging = topTabShouldStretchIndicator,
                         indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                         indicatorLayerScaleTransform = if (topTabDragActive) {
@@ -1260,7 +1268,7 @@ private fun LightweightHomeTopTabs(
                         },
                         glassEnabled = true,
                         motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
+                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
                         isDragging = topTabShouldStretchIndicator,
                         indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                         indicatorLayerScaleTransform = if (topTabDragActive) {
@@ -1389,7 +1397,7 @@ private fun LightweightHomeTopTabs(
                             indicatorIdleSurfaceColor = indicatorColor.copy(alpha = 0.42f),
                             glassEnabled = true,
                             motionProgress = topTabMotionProgress,
-                            velocityItemsPerSecond = topTabMotionVelocityItemsPerSecond,
+                            velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
                             isDragging = topTabShouldStretchIndicator,
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = if (topTabDragActive) {
@@ -1912,6 +1920,11 @@ internal fun resolveTopTabPagerVelocityItemsPerSecond(
     if (elapsedSeconds <= 0f) return 0f
     return ((currentPosition - previousPosition) / elapsedSeconds).coerceIn(-12f, 12f)
 }
+
+internal fun resolveTopTabIndicatorLayerVelocityItemsPerSecond(
+    topTabDragActive: Boolean,
+    motionVelocityItemsPerSecond: Float
+): Float = if (topTabDragActive) 0f else motionVelocityItemsPerSecond
 
 internal fun shouldTopTabIndicatorBeInteracting(
     pagerIsDragging: Boolean = false,

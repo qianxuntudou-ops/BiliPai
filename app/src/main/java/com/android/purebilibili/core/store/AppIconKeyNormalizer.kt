@@ -10,13 +10,7 @@ private val CANONICAL_APP_ICON_KEYS = setOf(
     "icon_bilipai",
     "icon_bilipai_pink",
     "icon_bilipai_white",
-    "icon_bilipai_monet",
-    "icon_anime",
-    "icon_flat",
-    "icon_telegram_blue",
-    "icon_telegram_dark",
-    "Yuki",
-    "Headphone"
+    "icon_bilipai_monet"
 )
 
 private val LAUNCHER_ALIAS_SUFFIX_BY_KEY = mapOf(
@@ -24,13 +18,7 @@ private val LAUNCHER_ALIAS_SUFFIX_BY_KEY = mapOf(
     "icon_bilipai" to "MainActivityAliasBiliPai",
     "icon_bilipai_pink" to "MainActivityAliasBiliPaiPink",
     "icon_bilipai_white" to "MainActivityAliasBiliPaiWhite",
-    "icon_bilipai_monet" to "MainActivityAliasBiliPaiMonet",
-    "icon_anime" to "MainActivityAliasAnime",
-    "icon_flat" to "MainActivityAliasFlat",
-    "icon_telegram_blue" to "MainActivityAliasTelegramBlue",
-    "icon_telegram_dark" to "MainActivityAliasDark",
-    "Yuki" to "MainActivityAliasYuki",
-    "Headphone" to "MainActivityAliasHeadphone"
+    "icon_bilipai_monet" to "MainActivityAliasBiliPaiMonet"
 )
 
 private val NO_ICON_LAUNCHER_ALIAS_SUFFIX_BY_KEY = mapOf(
@@ -38,13 +26,22 @@ private val NO_ICON_LAUNCHER_ALIAS_SUFFIX_BY_KEY = mapOf(
     "icon_bilipai" to "MainActivityAliasBiliPaiNoIcon",
     "icon_bilipai_pink" to "MainActivityAliasBiliPaiPinkNoIcon",
     "icon_bilipai_white" to "MainActivityAliasBiliPaiWhiteNoIcon",
-    "icon_bilipai_monet" to "MainActivityAliasBiliPaiMonetNoIcon",
-    "icon_anime" to "MainActivityAliasAnimeNoIcon",
-    "icon_flat" to "MainActivityAliasFlatNoIcon",
-    "icon_telegram_blue" to "MainActivityAliasTelegramBlueNoIcon",
-    "icon_telegram_dark" to "MainActivityAliasDarkNoIcon",
-    "Yuki" to "MainActivityAliasYukiNoIcon",
-    "Headphone" to "MainActivityAliasHeadphoneNoIcon"
+    "icon_bilipai_monet" to "MainActivityAliasBiliPaiMonetNoIcon"
+)
+
+private val RETIRED_APP_ICON_ALIAS_SUFFIXES = setOf(
+    "MainActivityAliasAnime",
+    "MainActivityAliasFlat",
+    "MainActivityAliasTelegramBlue",
+    "MainActivityAliasDark",
+    "MainActivityAliasYuki",
+    "MainActivityAliasHeadphone",
+    "MainActivityAliasAnimeNoIcon",
+    "MainActivityAliasFlatNoIcon",
+    "MainActivityAliasTelegramBlueNoIcon",
+    "MainActivityAliasDarkNoIcon",
+    "MainActivityAliasYukiNoIcon",
+    "MainActivityAliasHeadphoneNoIcon"
 )
 
 fun normalizeAppIconKey(rawKey: String?): String {
@@ -57,11 +54,6 @@ fun normalizeAppIconKey(rawKey: String?): String {
         "BiliPai Pink", "BiliPai 粉", "bilipai_pink" -> "icon_bilipai_pink"
         "BiliPai White", "BiliPai 白", "bilipai_white" -> "icon_bilipai_white"
         "BiliPai Monet", "BiliPai 莫奈", "bilipai_monet" -> "icon_bilipai_monet"
-        "Anime" -> "icon_anime"
-        "Flat" -> "icon_flat"
-        "Telegram Blue" -> "icon_telegram_blue"
-        "Dark", "Telegram Dark" -> "icon_telegram_dark"
-        "icon_headphone" -> "Headphone"
         else -> if (CANONICAL_APP_ICON_KEYS.contains(key)) key else DEFAULT_APP_ICON_KEY
     }
 }
@@ -83,7 +75,11 @@ fun resolveAppIconLauncherAlias(
 }
 
 fun allManagedAppIconLauncherAliases(packageName: String): Set<String> {
-    return (LAUNCHER_ALIAS_SUFFIX_BY_KEY.values + NO_ICON_LAUNCHER_ALIAS_SUFFIX_BY_KEY.values)
+    return (
+        LAUNCHER_ALIAS_SUFFIX_BY_KEY.values +
+            NO_ICON_LAUNCHER_ALIAS_SUFFIX_BY_KEY.values +
+            RETIRED_APP_ICON_ALIAS_SUFFIXES
+        )
         .map { aliasSuffix -> "$APP_ICON_COMPONENT_PACKAGE_NAME.$aliasSuffix" }
         .plus(APP_ICON_COMPAT_ALIAS_CLASS_NAME)
         .toSet()
