@@ -1,6 +1,13 @@
 package com.android.purebilibili.feature.settings
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -255,65 +262,93 @@ internal data class SettingsRootCategoryState(
 @Composable
 internal fun SettingsRootCategoryNavigationSection(
     category: SettingsRootCategory,
-    onClick: () -> Unit
+    isExpanded: Boolean,
+    onToggle: () -> Unit,
+    actions: SettingsRootCategoryActions,
+    state: SettingsRootCategoryState
 ) {
     val uiPreset = LocalUiPreset.current
     val visual = rememberSettingsEntryVisual(category.searchTarget, uiPreset)
     val effectiveIconTint = rememberAdaptiveSemanticIconTint(visual.iconTint, uiPreset)
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (isExpanded) 90f else 0f,
+        animationSpec = tween(durationMillis = 200),
+        label = "chevronRotation"
+    )
 
-    SettingsCardGroup {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onClick)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
+    Column {
+        // Header row
+        SettingsCardGroup {
+            Row(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(AppShapes.container(ContainerLevel.Chip))
-                    .background(effectiveIconTint.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                when {
-                    visual.icon != null -> Icon(
-                        imageVector = visual.icon,
-                        contentDescription = null,
-                        tint = effectiveIconTint,
-                        modifier = Modifier.size(22.dp)
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(AppShapes.container(ContainerLevel.Chip))
+                        .background(effectiveIconTint.copy(alpha = 0.14f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    when {
+                        visual.icon != null -> Icon(
+                            imageVector = visual.icon,
+                            contentDescription = null,
+                            tint = effectiveIconTint,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        visual.iconResId != null -> Icon(
+                            painter = painterResource(id = visual.iconResId),
+                            contentDescription = null,
+                            tint = effectiveIconTint,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = category.title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
-                    visual.iconResId != null -> Icon(
-                        painter = painterResource(id = visual.iconResId),
-                        contentDescription = null,
-                        tint = effectiveIconTint,
-                        modifier = Modifier.size(22.dp)
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = category.subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
-            }
-            Spacer(modifier = Modifier.width(14.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = category.title,
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = category.subtitle,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                Spacer(modifier = Modifier.width(8.dp))
+                Icon(
+                    imageVector = CupertinoIcons.Default.ChevronForward,
+                    contentDescription = if (isExpanded) "收起${category.title}" else "展开${category.title}",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer { rotationZ = chevronRotation }
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Icon(
-                imageVector = CupertinoIcons.Default.ChevronForward,
-                contentDescription = "进入${category.title}",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.72f),
-                modifier = Modifier.size(20.dp)
-            )
+        }
+
+        // Expandable content
+        AnimatedVisibility(
+            visible = isExpanded,
+            enter = expandVertically(clip = false) + fadeIn(),
+            exit = shrinkVertically(clip = false) + fadeOut()
+        ) {
+            Box(modifier = Modifier.padding(top = 12.dp)) {
+                SettingsRootCategoryContent(
+                    category = category,
+                    actions = actions,
+                    state = state
+                )
+            }
         }
     }
 }
