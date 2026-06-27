@@ -114,6 +114,7 @@ object VideoRepository {
     private val api = NetworkModule.api
     private val buvidApi = NetworkModule.buvidApi
     private val subtitleCueCache = ConcurrentHashMap<String, List<SubtitleCue>>()
+    private val verticalVideoCache = ConcurrentHashMap<String, Boolean>()
 
     private val QUALITY_CHAIN = listOf(120, 116, 112, 80, 74, 64, 32, 16)
     private const val APP_API_COOLDOWN_MS = 120_000L
@@ -748,6 +749,26 @@ object VideoRepository {
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    suspend fun isVerticalVideo(bvid: String): Boolean = withContext(Dispatchers.IO) {
+        val normalizedBvid = bvid.trim()
+        if (normalizedBvid.isEmpty()) return@withContext false
+        verticalVideoCache[normalizedBvid]?.let { return@withContext it }
+        try {
+            val lookup = resolveVideoInfoLookupInput(rawBvid = normalizedBvid, aid = 0L)
+                ?: return@withContext false
+            val viewResp = if (lookup.bvid.isNotEmpty()) {
+                api.getVideoInfo(lookup.bvid)
+            } else {
+                api.getVideoInfoByAid(lookup.aid)
+            }
+            val isVertical = viewResp.data?.dimension?.isVertical == true
+            verticalVideoCache[normalizedBvid] = isVertical
+            isVertical
+        } catch (_: Exception) {
+            false
         }
     }
 

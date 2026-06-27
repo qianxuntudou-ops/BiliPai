@@ -123,14 +123,19 @@ data class FavoriteData(
             stat = Stat(view = cnt_info?.play ?: 0, danmaku = cnt_info?.danmaku ?: 0),
             duration = duration,
             progress = progress,
-            view_at = view_at
+            view_at = view_at,
+            isVertical = resolveFavoriteVideoVertical(
+                dimension = ugc?.dimension,
+                coverUrl = cover
+            )
         )
     }
 }
 
 @Serializable
 data class FavoriteUgc(
-    val first_cid: Long = 0
+    val first_cid: Long = 0,
+    val dimension: Dimension? = null
 )
 
 @Serializable

@@ -1,5 +1,7 @@
 package com.android.purebilibili.navigation
 
+import com.android.purebilibili.data.model.response.resolveKnownVerticalVideo
+
 internal data class PortraitStoryNavigationSeed(
     val bvid: String,
     val cid: Long,
@@ -12,10 +14,16 @@ internal fun resolvePortraitStoryNavigationSeed(
     startAudio: Boolean,
     bvid: String,
     cid: Long = 0L,
-    coverUrl: String = ""
+    coverUrl: String = "",
+    verticalRatioThreshold: Float = 1.0f
 ): PortraitStoryNavigationSeed? {
     val normalizedBvid = bvid.trim()
-    if (!directPortraitStoryEntry || !isVerticalVideo || startAudio || normalizedBvid.isEmpty()) {
+    val resolvedVertical = resolveKnownVerticalVideo(
+        isVerticalVideo = isVerticalVideo,
+        coverUrl = coverUrl,
+        verticalRatioThreshold = verticalRatioThreshold
+    )
+    if (!directPortraitStoryEntry || !resolvedVertical || startAudio || normalizedBvid.isEmpty()) {
         return null
     }
     return PortraitStoryNavigationSeed(

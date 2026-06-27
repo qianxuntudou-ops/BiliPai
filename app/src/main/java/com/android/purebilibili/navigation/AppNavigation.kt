@@ -641,20 +641,55 @@ fun AppNavigation(
                 )
             )
         }
-        fun navigateToVideoRouteInNavigation3(route: String, sourceRoute: String?) {
+        fun navigateToVideoRouteInNavigation3(
+            route: String,
+            sourceRoute: String?,
+            skipPortraitStoryResolution: Boolean = false
+        ) {
             if (!canNavigate(false)) return
             val parsedKey = legacyRouteToBiliPaiNavKey(route)
             val videoKey = parsedKey as? BiliPaiNavKey.VideoDetail
-            resolvePortraitStoryNavigationSeed(
-                directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry,
-                isVerticalVideo = videoKey?.initialVertical == true,
-                startAudio = videoKey?.startAudio == true,
-                bvid = videoKey?.bvid.orEmpty(),
-                cid = videoKey?.cid ?: 0L,
-                coverUrl = videoKey?.coverUrl.orEmpty()
-            )?.let { seed ->
-                navigateToPortraitStoryInNavigation3(seed)
-                return
+            if (!skipPortraitStoryResolution) {
+                resolvePortraitStoryNavigationSeed(
+                    directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry,
+                    isVerticalVideo = videoKey?.initialVertical == true,
+                    startAudio = videoKey?.startAudio == true,
+                    bvid = videoKey?.bvid.orEmpty(),
+                    cid = videoKey?.cid ?: 0L,
+                    coverUrl = videoKey?.coverUrl.orEmpty()
+                )?.let { seed ->
+                    navigateToPortraitStoryInNavigation3(seed)
+                    return
+                }
+                if (
+                    videoKey != null &&
+                    com.android.purebilibili.data.model.response.shouldResolveVerticalVideoForPortraitEntry(
+                        directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry,
+                        startAudio = videoKey.startAudio,
+                        bvid = videoKey.bvid,
+                        isVerticalVideo = videoKey.initialVertical,
+                        coverUrl = videoKey.coverUrl
+                    )
+                ) {
+                    coroutineScope.launch {
+                        if (com.android.purebilibili.data.repository.VideoRepository.isVerticalVideo(videoKey.bvid)) {
+                            navigateToPortraitStoryInNavigation3(
+                                PortraitStoryNavigationSeed(
+                                    bvid = videoKey.bvid,
+                                    cid = videoKey.cid,
+                                    coverUrl = videoKey.coverUrl
+                                )
+                            )
+                        } else {
+                            navigateToVideoRouteInNavigation3(
+                                route = route,
+                                sourceRoute = sourceRoute,
+                                skipPortraitStoryResolution = true
+                            )
+                        }
+                    }
+                    return
+                }
             }
             val videoBvid = videoKey?.bvid.orEmpty()
             val matchedVisibleCardRoute = resolveVideoCardSourceRouteForNavigation(
@@ -725,17 +760,47 @@ fun AppNavigation(
                 Toast.makeText(context, "当前无网络，仅支持播放已缓存视频", Toast.LENGTH_SHORT).show()
                 return
             }
-            navigateToVideoRouteInNavigation3(
-                route = resolveStandardVideoRoute(
-                    bvid = bvid,
-                    cid = cid,
-                    coverUrl = coverUrl,
+            val videoRoute = resolveStandardVideoRoute(
+                bvid = bvid,
+                cid = cid,
+                coverUrl = coverUrl,
+                startAudio = startAudio,
+                autoPortrait = autoPortrait,
+                resumePositionMs = resumePositionMs,
+                initialVertical = initialVertical
+            )
+            if (
+                com.android.purebilibili.data.model.response.shouldResolveVerticalVideoForPortraitEntry(
+                    directPortraitStoryEntry = playerInteractionSettings.directPortraitStoryEntry,
                     startAudio = startAudio,
-                    autoPortrait = autoPortrait,
-                    resumePositionMs = resumePositionMs,
-                    initialVertical = initialVertical
-                ),
-                sourceRoute = sourceRoute
+                    bvid = bvid,
+                    isVerticalVideo = initialVertical,
+                    coverUrl = coverUrl
+                )
+            ) {
+                coroutineScope.launch {
+                    if (com.android.purebilibili.data.repository.VideoRepository.isVerticalVideo(bvid)) {
+                        navigateToPortraitStoryInNavigation3(
+                            PortraitStoryNavigationSeed(
+                                bvid = bvid.trim(),
+                                cid = cid,
+                                coverUrl = coverUrl
+                            )
+                        )
+                    } else {
+                        navigateToVideoRouteInNavigation3(
+                            route = videoRoute,
+                            sourceRoute = sourceRoute,
+                            skipPortraitStoryResolution = true
+                        )
+                    }
+                }
+                return
+            }
+            navigateToVideoRouteInNavigation3(
+                route = videoRoute,
+                sourceRoute = sourceRoute,
+                skipPortraitStoryResolution = true
             )
         }
         fun navigateToHomeVideoInNavigation3(request: HomeVideoClickRequest) {

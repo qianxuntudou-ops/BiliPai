@@ -61,17 +61,24 @@ data class HistoryData(
             business == HistoryBusiness.ARTICLE -> history?.oid ?: 0L
             else -> history?.oid ?: 0L
         }
+        val resolvedCover = listOf(cover, pic, covers.firstOrNull().orEmpty())
+            .firstOrNull { it.isNotBlank() }
+            .orEmpty()
         return VideoItem(
             id = if (business == HistoryBusiness.ARTICLE) resolvedArticleId else (history?.oid ?: 0L),
             bvid = history?.bvid ?: "",
             cid = history?.cid ?: 0,
             title = title,
-            pic = listOf(cover, pic, covers.firstOrNull().orEmpty()).firstOrNull { it.isNotBlank() }.orEmpty(),
+            pic = resolvedCover,
             owner = Owner(mid = author_mid, name = author_name, face = author_face),
             stat = stat ?: Stat(),
             duration = duration,
             progress = progress,
-            view_at = view_at
+            view_at = view_at,
+            isVertical = resolveKnownVerticalVideo(
+                isVerticalVideo = false,
+                coverUrl = resolvedCover
+            )
         )
     }
     
