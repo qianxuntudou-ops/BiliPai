@@ -227,9 +227,9 @@ class PortraitCommentPresentationPolicyTest {
     }
 
     @Test
-    fun `detached thread detail should stay fullscreen when no top reserve exists`() {
+    fun `embedded thread detail should keep main comment drawer height when no top reserve exists`() {
         assertEquals(
-            1f,
+            0.60f,
             resolveVideoSubReplySheetMaxHeightFraction(
                 screenHeightPx = 1000,
                 topReservedPx = 0

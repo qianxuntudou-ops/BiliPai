@@ -145,9 +145,13 @@ internal fun resolveVideoCommentSheetHostHeightPx(
                 .coerceIn(0, hostHeightPx)
 
         VideoCommentSheetHostContent.THREAD_DETAIL -> {
-            val reservedTopPx = topReservedPx.coerceIn(0, hostHeightPx)
-            val availableHeightPx = hostHeightPx - reservedTopPx
-            if (availableHeightPx > 0) availableHeightPx else hostHeightPx
+            val heightFraction = resolveVideoSubReplySheetMaxHeightFraction(
+                screenHeightPx = hostHeightPx,
+                topReservedPx = topReservedPx
+            )
+            (hostHeightPx * heightFraction)
+                .roundToInt()
+                .coerceIn(0, hostHeightPx)
         }
 
         VideoCommentSheetHostContent.HIDDEN -> 0
@@ -227,7 +231,8 @@ internal fun resolveVideoCommentSheetDragVisibilityProgress(
     isDismissDragSettling: Boolean,
     sheetOffsetPx: Float,
     sheetHeightPx: Float,
-    hostVisibilityProgress: Float
+    hostVisibilityProgress: Float,
+    isDragDismissExitPending: Boolean = false
 ): Float {
     return when {
         (hostContent != VideoCommentSheetHostContent.HIDDEN && mainSheetVisible) ||
@@ -236,9 +241,14 @@ internal fun resolveVideoCommentSheetDragVisibilityProgress(
                 sheetOffsetPx = sheetOffsetPx,
                 sheetHeightPx = sheetHeightPx
             )
-        hostContent == VideoCommentSheetHostContent.THREAD_DETAIL -> 1f
+        hostContent == VideoCommentSheetHostContent.THREAD_DETAIL &&
+            !mainSheetVisible -> 1f
         hostContent == VideoCommentSheetHostContent.HIDDEN && hostVisibilityProgress > 0f ->
-            hostVisibilityProgress.coerceIn(0f, 1f)
+            if (isDragDismissExitPending) {
+                0f
+            } else {
+                hostVisibilityProgress.coerceIn(0f, 1f)
+            }
         else -> 0f
     }
 }
@@ -330,6 +340,7 @@ fun VideoCommentSheetHost(
     val appearance = rememberVideoCommentAppearance()
     var isDraggingSheet by remember { mutableStateOf(false) }
     var isDismissDragSettling by remember { mutableStateOf(false) }
+    var isDragDismissExitPending by remember { mutableStateOf(false) }
     var sheetDragTargetOffsetPx by remember { mutableStateOf(0f) }
     var mainSheetMeasuredHeightPx by remember { mutableStateOf(0f) }
     val hostVisibilityProgress by animateFloatAsState(
@@ -361,7 +372,8 @@ fun VideoCommentSheetHost(
         isDismissDragSettling = isDismissDragSettling,
         sheetOffsetPx = sheetDragOffsetPx,
         sheetHeightPx = mainSheetMeasuredHeightPx,
-        hostVisibilityProgress = hostVisibilityProgress
+        hostVisibilityProgress = hostVisibilityProgress,
+        isDragDismissExitPending = isDragDismissExitPending
     )
     val mainSheetVisibilityProgress = resolveVideoCommentSheetPresentationProgress(
         hostVisibilityProgress = hostVisibilityProgress,
@@ -382,7 +394,6 @@ fun VideoCommentSheetHost(
             )
         ) {
             isDismissDragSettling = false
-            sheetDragTargetOffsetPx = 0f
             if (hostContent == VideoCommentSheetHostContent.THREAD_DETAIL) {
                 commentViewModel.closeSubReply()
             } else {
@@ -397,9 +408,11 @@ fun VideoCommentSheetHost(
         )
     }
 
-    LaunchedEffect(hostVisible) {
-        if (!hostVisible && !isDismissDragSettling) {
+    LaunchedEffect(hostVisible, hostVisibilityProgress) {
+        if (!hostVisible && hostVisibilityProgress <= 0f) {
             isDraggingSheet = false
+            isDismissDragSettling = false
+            isDragDismissExitPending = false
             sheetDragTargetOffsetPx = 0f
         }
     }
@@ -603,6 +616,7 @@ fun VideoCommentSheetHost(
                                         )
                                     ) {
                                         isDismissDragSettling = true
+                                        isDragDismissExitPending = true
                                         sheetDragTargetOffsetPx =
                                             resolvePortraitCommentDismissDragTargetOffset(
                                                 sheetHeightPx = mainSheetMeasuredHeightPx

@@ -146,9 +146,12 @@ internal fun resolveVideoSubReplySheetMaxHeightFraction(
     screenHeightPx: Int = 0,
     topReservedPx: Int = 0
 ): Float {
-    if (screenHeightPx <= 0) return FULLSCREEN_VIDEO_SUB_REPLY_SHEET_HEIGHT_FRACTION
-
     val reservedTopPx = topReservedPx.coerceAtLeast(0)
+    if (shouldUseEmbeddedVideoSubReplyPresentation() && reservedTopPx == 0) {
+        return MAIN_COMMENT_SHEET_HEIGHT_FRACTION
+    }
+
+    if (screenHeightPx <= 0) return FULLSCREEN_VIDEO_SUB_REPLY_SHEET_HEIGHT_FRACTION
     if (reservedTopPx == 0) return FULLSCREEN_VIDEO_SUB_REPLY_SHEET_HEIGHT_FRACTION
 
     val availableHeightPx = (screenHeightPx - reservedTopPx).coerceAtLeast(0)

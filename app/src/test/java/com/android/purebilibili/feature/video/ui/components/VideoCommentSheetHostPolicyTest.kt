@@ -128,13 +128,25 @@ class VideoCommentSheetHostPolicyTest {
     }
 
     @Test
-    fun `embedded portrait pager thread detail covers content when top reserve is not measured`() {
+    fun `embedded portrait pager thread detail keeps drawer height when top reserve is not measured`() {
         assertEquals(
-            1f,
+            0.60f,
             resolveVideoCommentSheetHostHeightFraction(
                 hostContent = VideoCommentSheetHostContent.THREAD_DETAIL,
                 mainSheetVisible = true,
                 screenHeightPx = 1000,
+                topReservedPx = 0
+            )
+        )
+    }
+
+    @Test
+    fun `embedded portrait pager thread detail pixel height matches main comment drawer`() {
+        assertEquals(
+            720,
+            resolveVideoCommentSheetHostHeightPx(
+                hostContent = VideoCommentSheetHostContent.THREAD_DETAIL,
+                hostHeightPx = 1200,
                 topReservedPx = 0
             )
         )
@@ -384,6 +396,29 @@ class VideoCommentSheetHostPolicyTest {
                 sheetOffsetPx = 0f,
                 sheetHeightPx = 600f,
                 hostVisibilityProgress = 0.4f
+            )
+        )
+    }
+
+    @Test
+    fun `host exit after drag dismiss keeps video expanded while sheet fades out`() {
+        assertEquals(
+            0f,
+            resolveVideoCommentSheetDragVisibilityProgress(
+                hostContent = VideoCommentSheetHostContent.HIDDEN,
+                mainSheetVisible = false,
+                isDismissDragSettling = false,
+                sheetOffsetPx = 590f,
+                sheetHeightPx = 600f,
+                hostVisibilityProgress = 0.6f,
+                isDragDismissExitPending = true
+            )
+        )
+        assertEquals(
+            0f,
+            resolveVideoCommentSheetPresentationProgress(
+                hostVisibilityProgress = 0.6f,
+                dragVisibilityProgress = 0f
             )
         )
     }
