@@ -165,6 +165,22 @@ internal fun cancelPlaybackSeekInteraction(
     )
 }
 
+internal fun resetPlaybackSeekSessionForActivePlayback(
+    state: PlaybackSeekSessionState,
+    playbackPositionMs: Long
+): PlaybackSeekSessionState {
+    val safePositionMs = playbackPositionMs.coerceAtLeast(0L)
+    return state.copy(
+        playbackPositionMs = safePositionMs,
+        sliderPositionMs = safePositionMs,
+        isSliderMoving = false,
+        pendingSeekPositionMs = null,
+        pendingSeekOriginPositionMs = null,
+        shouldResumePlayback = null,
+        sliderInteractionUpdatedAtMs = 0L
+    )
+}
+
 internal fun shouldUsePlaybackSeekSessionPosition(
     state: PlaybackSeekSessionState,
     toleranceMs: Long = DEFAULT_PLAYBACK_SEEK_PENDING_TOLERANCE_MS

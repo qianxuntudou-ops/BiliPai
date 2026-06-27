@@ -159,7 +159,7 @@ import com.android.purebilibili.feature.video.playback.session.shouldAttemptPlay
 import com.android.purebilibili.feature.video.playback.session.cancelPlaybackSeekInteraction
 import com.android.purebilibili.feature.video.playback.session.commitPlaybackSeekInteraction
 import com.android.purebilibili.feature.video.playback.session.finishPlaybackSeekInteraction
-import com.android.purebilibili.feature.video.playback.session.shouldUsePlaybackSeekSessionPosition
+import com.android.purebilibili.feature.video.playback.session.resetPlaybackSeekSessionForActivePlayback
 import com.android.purebilibili.feature.video.playback.session.startPlaybackSeekInteraction
 import com.android.purebilibili.feature.video.playback.session.syncPlaybackSeekSession
 import com.android.purebilibili.feature.video.playback.session.updatePlaybackSeekInteraction
@@ -1085,6 +1085,13 @@ fun VideoPlayerSection(
         longPressSpeedStartX = startOffset?.x ?: -1f
         longPressSpeedStartY = startOffset?.y ?: -1f
         longPressSpeedFeedbackVisible = true
+        gestureMode = VideoGestureMode.None
+        isGestureVisible = false
+        dragStartX = -1f
+        sharedSeekSession = resetPlaybackSeekSessionForActivePlayback(
+            state = sharedSeekSession,
+            playbackPositionMs = player.currentPosition
+        )
         com.android.purebilibili.core.util.Logger.d("VideoPlayerSection") {
             "⏩ LongPress: speed ${effectiveLongPressSpeed}x (requested=${longPressSpeed}x, audio=$currentAudioQuality)"
         }
@@ -1133,6 +1140,15 @@ fun VideoPlayerSection(
         longPressSpeedStartedAtMs = 0L
         longPressSpeedStartX = -1f
         longPressSpeedStartY = -1f
+        if (gestureMode != VideoGestureMode.Seek) {
+            gestureMode = VideoGestureMode.None
+            isGestureVisible = false
+            dragStartX = -1f
+            sharedSeekSession = resetPlaybackSeekSessionForActivePlayback(
+                state = sharedSeekSession,
+                playbackPositionMs = playerState.player.currentPosition
+            )
+        }
         com.android.purebilibili.core.util.Logger.d("VideoPlayerSection") {
             if (longPressSpeedLocked) {
                 "🔒 LongPress locked: speed ${lockedLongPressSpeed}x"
@@ -1322,7 +1338,10 @@ fun VideoPlayerSection(
                             // 🔒 锁定时禁用拖拽手势
                             if (isScreenLocked) {
                                 return@detectDragGestures
-                            }                
+                            }
+                            if (isLongPressing || longPressSpeedLocked) {
+                                return@detectDragGestures
+                            }
                             //  [新增] 边缘防误触检测
                             //  如果在屏幕顶部或底部区域开始滑动，则视为系统手势（如下拉通知栏），不触发播放器手势
                             val requestedBottomGestureExclusionPx = if (showControls) {
@@ -1359,7 +1378,10 @@ fun VideoPlayerSection(
                                 totalDragDistanceX = 0f
 
                                 startVolumeStep = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
-                                startPosition = sharedSeekSession.sliderPositionMs.coerceAtLeast(0L)
+                                startPosition = resolveGestureSeekStartPositionMs(
+                                    seekSession = sharedSeekSession,
+                                    playbackPositionMs = playerState.player.currentPosition
+                                )
                                 seekTargetTime = startPosition
 
                                 val attributes = getActivity()?.window?.attributes
@@ -1387,6 +1409,10 @@ fun VideoPlayerSection(
                                 isGestureVisible = false
                                 gestureMode = VideoGestureMode.None
                                 dragStartX = -1f
+                                sharedSeekSession = resetPlaybackSeekSessionForActivePlayback(
+                                    state = sharedSeekSession,
+                                    playbackPositionMs = playerState.player.currentPosition
+                                )
                                 return@detectDragGestures
                             }
                             if (gestureMode == VideoGestureMode.Seek) {
@@ -1445,6 +1471,10 @@ fun VideoPlayerSection(
                                 isGestureVisible = false
                                 gestureMode = VideoGestureMode.None
                                 dragStartX = -1f
+                                sharedSeekSession = resetPlaybackSeekSessionForActivePlayback(
+                                    state = sharedSeekSession,
+                                    playbackPositionMs = playerState.player.currentPosition
+                                )
                                 return@detectDragGestures
                             }
                             isGestureVisible = false
@@ -4245,11 +4275,12 @@ fun VideoPlayerSection(
                     danmakuManager.seekTo(commitResult.committedPositionMs)
                     onUserSeek(commitResult.committedPositionMs)
                 },
-                progressDisplayOverridePositionMs = when {
-                    shouldUsePlaybackSeekSessionPosition(sharedSeekSession) ->
-                        sharedSeekSession.sliderPositionMs
-                    else -> uiState.pendingPlaybackTransitionPositionMs
-                },
+                progressDisplayOverridePositionMs = resolveProgressDisplayOverridePositionMs(
+                    seekSession = sharedSeekSession,
+                    pendingPlaybackTransitionPositionMs = uiState.pendingPlaybackTransitionPositionMs,
+                    isLongPressing = isLongPressing,
+                    longPressSpeedLocked = longPressSpeedLocked
+                ),
                 isPlaybackTransitionPending = uiState.pendingPlaybackTransitionPositionMs != null,
                 highFrequencyProgressActive = isLongPressing,
                 // [New] Codec & Audio

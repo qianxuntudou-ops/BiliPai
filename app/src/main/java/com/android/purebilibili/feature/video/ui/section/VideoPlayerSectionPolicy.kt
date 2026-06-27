@@ -8,6 +8,8 @@ import com.android.purebilibili.feature.video.ui.components.GesturePercentMotion
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.ui.PlayerView
+import com.android.purebilibili.feature.video.playback.session.PlaybackSeekSessionState
+import com.android.purebilibili.feature.video.playback.session.shouldUsePlaybackSeekSessionPosition
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.filled.*
 import io.github.alexzhirkevich.cupertino.icons.outlined.*
@@ -307,6 +309,40 @@ internal fun shouldConsumeExclusiveLongPressSpeedDrag(
     longPressSpeedLocked: Boolean
 ): Boolean {
     return isLongPressing && !longPressSpeedLocked
+}
+
+internal fun shouldBypassPlaybackSeekSessionProgressOverride(
+    isLongPressing: Boolean,
+    longPressSpeedLocked: Boolean
+): Boolean {
+    return isLongPressing || longPressSpeedLocked
+}
+
+internal fun resolveProgressDisplayOverridePositionMs(
+    seekSession: PlaybackSeekSessionState,
+    pendingPlaybackTransitionPositionMs: Long?,
+    isLongPressing: Boolean,
+    longPressSpeedLocked: Boolean
+): Long? {
+    if (shouldBypassPlaybackSeekSessionProgressOverride(isLongPressing, longPressSpeedLocked)) {
+        return pendingPlaybackTransitionPositionMs
+    }
+    return if (shouldUsePlaybackSeekSessionPosition(seekSession)) {
+        seekSession.sliderPositionMs
+    } else {
+        pendingPlaybackTransitionPositionMs
+    }
+}
+
+internal fun resolveGestureSeekStartPositionMs(
+    seekSession: PlaybackSeekSessionState,
+    playbackPositionMs: Long
+): Long {
+    return if (seekSession.isSliderMoving) {
+        seekSession.sliderPositionMs
+    } else {
+        playbackPositionMs.coerceAtLeast(0L)
+    }
 }
 
 internal fun shouldUnlockLockedLongPressSpeedFromRightDownDrag(

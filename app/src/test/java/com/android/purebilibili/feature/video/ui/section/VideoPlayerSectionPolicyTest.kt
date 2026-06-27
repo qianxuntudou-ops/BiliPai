@@ -2,10 +2,15 @@ package com.android.purebilibili.feature.video.ui.section
 
 import androidx.media3.common.Player
 import androidx.media3.common.PlaybackParameters
+import com.android.purebilibili.feature.video.playback.session.PlaybackSeekSessionState
+import com.android.purebilibili.feature.video.playback.session.startPlaybackSeekInteraction
+import com.android.purebilibili.feature.video.playback.session.syncPlaybackSeekSession
+import com.android.purebilibili.feature.video.playback.session.updatePlaybackSeekInteraction
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class VideoPlayerSectionPolicyTest {
@@ -1437,5 +1442,108 @@ class VideoPlayerSectionPolicyTest {
                 isScreenLocked = true
             )
         )
+    }
+
+    @Test
+    fun progressOverride_bypassesFrozenSeekSessionDuringLongPressSpeed() {
+        val frozenSeekSession = updatePlaybackSeekInteraction(
+            state = startPlaybackSeekInteraction(
+                state = syncPlaybackSeekSession(
+                    state = PlaybackSeekSessionState(),
+                    playbackPositionMs = 8_000L
+                ),
+                positionMs = 8_000L
+            ),
+            positionMs = 12_000L
+        )
+
+        assertNull(
+            resolveProgressDisplayOverridePositionMs(
+                seekSession = frozenSeekSession,
+                pendingPlaybackTransitionPositionMs = null,
+                isLongPressing = true,
+                longPressSpeedLocked = false
+            )
+        )
+        assertNull(
+            resolveProgressDisplayOverridePositionMs(
+                seekSession = frozenSeekSession,
+                pendingPlaybackTransitionPositionMs = null,
+                isLongPressing = false,
+                longPressSpeedLocked = true
+            )
+        )
+        assertEquals(
+            12_000L,
+            resolveProgressDisplayOverridePositionMs(
+                seekSession = frozenSeekSession,
+                pendingPlaybackTransitionPositionMs = null,
+                isLongPressing = false,
+                longPressSpeedLocked = false
+            )
+        )
+    }
+
+    @Test
+    fun progressOverride_prefersPendingTransitionWhenLongPressSpeedBypassesSeekSession() {
+        assertEquals(
+            18_000L,
+            resolveProgressDisplayOverridePositionMs(
+                seekSession = PlaybackSeekSessionState(sliderPositionMs = 12_000L, isSliderMoving = true),
+                pendingPlaybackTransitionPositionMs = 18_000L,
+                isLongPressing = true,
+                longPressSpeedLocked = false
+            )
+        )
+    }
+
+    @Test
+    fun gestureSeekStart_usesLivePlaybackPositionWhenSeekSessionIsIdle() {
+        assertEquals(
+            26_000L,
+            resolveGestureSeekStartPositionMs(
+                seekSession = PlaybackSeekSessionState(
+                    playbackPositionMs = 8_000L,
+                    sliderPositionMs = 8_000L
+                ),
+                playbackPositionMs = 26_000L
+            )
+        )
+    }
+
+    @Test
+    fun gestureSeekStart_usesSliderPositionWhileSeekInteractionIsActive() {
+        assertEquals(
+            12_000L,
+            resolveGestureSeekStartPositionMs(
+                seekSession = PlaybackSeekSessionState(
+                    playbackPositionMs = 8_000L,
+                    sliderPositionMs = 12_000L,
+                    isSliderMoving = true
+                ),
+                playbackPositionMs = 26_000L
+            )
+        )
+    }
+
+    @Test
+    fun longPressSpeedStart_resetsSeekSessionToCurrentPlaybackPosition() {
+        val source = loadVideoPlayerSectionSource()
+        val startBlock = source
+            .substringAfter("fun startLongPressSpeedGesture(startOffset: Offset? = null) {")
+            .substringBefore("fun unlockLockedLongPressSpeedFromGesture()")
+
+        assertTrue(startBlock.contains("resetPlaybackSeekSessionForActivePlayback("))
+        assertTrue(startBlock.contains("gestureMode = VideoGestureMode.None"))
+    }
+
+    @Test
+    fun longPressSpeedDragStart_ignoresRegularDragWhileLongPressSpeedIsActive() {
+        val source = loadVideoPlayerSectionSource()
+        val dragStartBlock = source
+            .substringAfter("onDragStart = { offset ->")
+            .substringBefore("onDragEnd = {")
+
+        assertTrue(dragStartBlock.contains("if (isLongPressing || longPressSpeedLocked)"))
     }
 }
