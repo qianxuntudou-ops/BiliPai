@@ -1554,6 +1554,7 @@ fun iOSHomeHeader(
     pagerState: androidx.compose.foundation.pager.PagerState? = null, // [New] PagerState for sync
     // [New] LayerBackdrop for liquid glass effect
     backdrop: com.kyant.backdrop.backdrops.LayerBackdrop? = null,
+    miuixBackdrop: top.yukonga.miuix.kmp.blur.Backdrop? = null,
     homeSettings: com.android.purebilibili.core.store.HomeSettings? = null,
     topTabsVisible: Boolean = true,
     topTabsCollapsed: Boolean = false,
@@ -2208,6 +2209,7 @@ fun iOSHomeHeader(
                 liquidGlassTuning = liquidGlassTuning,
                 hazeState = hazeState,
                 backdrop = backdrop,
+                miuixBackdrop = miuixBackdrop,
                 isFloatingStyle = isTabFloating,
                 edgeToEdge = integratedCollapsedTopBar,
                 hasOuterChromeSurface = drawTopTabDockChrome,

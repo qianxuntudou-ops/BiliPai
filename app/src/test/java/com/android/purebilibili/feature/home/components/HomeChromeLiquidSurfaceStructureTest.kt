@@ -170,8 +170,9 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topBarSource.contains("KernelSuMiuixBottomBarIndicatorLayer(") &&
                 topBarSource.contains("val shouldPrimeTopTabLiquidGlassCapture =") &&
                 topBarSource.contains("val topTabContentBackdrop = rememberMiuixLayerBackdrop()") &&
-                topBarSource.contains("val topTabIndicatorContentBackdrop = topTabContentBackdrop") &&
-                !topBarSource.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)") &&
+                topBarSource.contains("rememberMiuixCombinedBackdrop(miuixBackdrop, topTabContentBackdrop)") &&
+                topBarSource.contains("backdrop = miuixBackdrop") &&
+                topBarSource.contains("indicatorZIndex = 0f") &&
                 topBarSource.contains("miuixLayerBackdrop(topTabContentBackdrop)") &&
                 topBarSource.contains("shouldRenderBottomBarIndicatorBackdrop(") &&
                 topBarSource.contains("allowIdleGlassEffect = false") &&

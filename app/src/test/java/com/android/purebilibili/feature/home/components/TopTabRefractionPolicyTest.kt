@@ -24,10 +24,9 @@ class TopTabRefractionPolicyTest {
         assertTrue(source.contains("topTabShouldStretchIndicator"))
         assertTrue(source.contains("val shouldPrimeTopTabLiquidGlassCapture ="))
         assertTrue(source.contains("val topTabContentBackdrop = rememberMiuixLayerBackdrop()"))
-        assertTrue(source.contains("val topTabIndicatorContentBackdrop = topTabContentBackdrop"))
-        assertFalse(source.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)"))
+        assertTrue(source.contains("rememberMiuixCombinedBackdrop(miuixBackdrop, topTabContentBackdrop)"))
         assertTrue(source.contains("contentBackdrop = effectiveTopTabIndicatorContentBackdrop"))
-        assertTrue(source.contains("backdrop = null"))
+        assertTrue(source.contains("backdrop = miuixBackdrop"))
         assertTrue(source.contains("indicatorLayerScaleTransform = if (topTabDragActive)"))
         assertTrue(source.contains("indicatorHeight = 4.dp"))
     }
@@ -367,7 +366,8 @@ class TopTabRefractionPolicyTest {
         assertFalse(source.contains("drawBackdrop("))
         assertFalse(source.contains(".layerBackdrop(tabsBackdrop)"))
         assertFalse(source.contains("rememberCombinedBackdrop(backdrop, tabsBackdrop)"))
-        assertFalse(source.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)"))
+        assertTrue(source.contains("rememberMiuixCombinedBackdrop(miuixBackdrop, topTabContentBackdrop)"))
+        assertTrue(source.contains("backdrop = miuixBackdrop"))
         assertTrue(source.contains("if (shouldPrimeTopTabLiquidGlassCapture)"))
         assertTrue(source.contains("miuixLayerBackdrop(topTabContentBackdrop)"))
     }
@@ -381,7 +381,7 @@ class TopTabRefractionPolicyTest {
         assertTrue(source.contains("val shouldUseMd3LiquidCapsule = effectiveRenderer == HomeTopTabRenderer.MD3"))
         assertTrue(source.contains("val shouldUseMd3DockBackedCapsule = ("))
         assertTrue(source.contains("effectiveRenderer == HomeTopTabRenderer.MIUIX"))
-        assertTrue(source.contains("topTabIndicatorBackdropAlwaysOn = shouldUseLiquidGlassIndicator"))
+        assertTrue(source.contains("topTabGlassLayersAlwaysOn = shouldUseLiquidGlassIndicator && miuixBackdrop != null"))
         assertTrue(source.contains("indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress"))
         assertTrue(source.contains("indicatorHeight = dockIndicatorHeight"))
     }

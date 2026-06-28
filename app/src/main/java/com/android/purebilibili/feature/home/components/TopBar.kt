@@ -59,6 +59,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.util.VelocityTracker
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -90,6 +91,7 @@ import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationSta
 import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.android.purebilibili.feature.home.components.liquid.rememberCombinedBackdrop as rememberMiuixCombinedBackdrop
 import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
 import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
 import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
@@ -720,6 +722,7 @@ private fun LightweightHomeTopTabs(
     liquidGlassStyle: LiquidGlassStyle = LiquidGlassStyle.CLASSIC,
     liquidGlassTuning: LiquidGlassTuning? = null,
     backdrop: LayerBackdrop? = null,
+    miuixBackdrop: MiuixBackdrop? = null,
     topTabSkinIconPaths: Map<String, TopTabSkinIconPaths> = emptyMap(),
     partitionSkinIconPath: String? = null,
     hasOuterChromeSurface: Boolean = false,
@@ -1107,9 +1110,9 @@ private fun LightweightHomeTopTabs(
                 !hasSkinStickerIcons
         val isTopTabIndicatorInteractionActive =
             topTabDragActive || topTabShouldStretchIndicator || topTabPressProgress > 0.001f
-        val shouldRenderTopTabIndicatorBackdrop = shouldRenderBottomBarIndicatorBackdrop(
+        val shouldRenderTopTabIndicatorBackdropRaw = shouldRenderBottomBarIndicatorBackdrop(
             glassEnabled = shouldUseLiquidGlassIndicator,
-            hasContentBackdrop = true,
+            hasContentBackdrop = miuixBackdrop != null,
             indicatorProgress = topTabMotionProgress,
             isTransitionRunning = isTransitionRunning,
             isBottomBarInteractionActive = isTopTabIndicatorInteractionActive,
@@ -1117,18 +1120,25 @@ private fun LightweightHomeTopTabs(
             allowTransitionIndicatorPulse = topTabPressProgress > 0.001f
         )
         val topTabContentBackdrop = rememberMiuixLayerBackdrop()
-        val topTabIndicatorContentBackdrop = topTabContentBackdrop
-        val topTabIndicatorBackdropAlwaysOn = shouldUseLiquidGlassIndicator
-        val effectiveTopTabIndicatorContentBackdrop = if (
-            topTabIndicatorBackdropAlwaysOn || shouldRenderTopTabIndicatorBackdrop
+        val topTabGlassLayersAlwaysOn = shouldUseLiquidGlassIndicator && miuixBackdrop != null
+        val shouldRenderTopTabIndicatorBackdrop =
+            topTabGlassLayersAlwaysOn || shouldRenderTopTabIndicatorBackdropRaw
+        val topTabIndicatorContentBackdrop = if (
+            miuixBackdrop != null && shouldUseLiquidGlassIndicator
         ) {
+            rememberMiuixCombinedBackdrop(miuixBackdrop, topTabContentBackdrop)
+        } else {
+            topTabContentBackdrop
+        }
+        val effectiveTopTabIndicatorContentBackdrop = if (shouldRenderTopTabIndicatorBackdrop) {
             topTabIndicatorContentBackdrop
         } else {
             null
         }
-        val measuredSelectedItemLeftPx by remember(shouldUseMovingIosCapsule) {
+        val usesMeasuredCapsuleAlignment = shouldUseMovingIosCapsule || shouldUseMd3DockBackedCapsule
+        val measuredSelectedItemLeftPx by remember(usesMeasuredCapsuleAlignment) {
             derivedStateOf {
-                if (!shouldUseMovingIosCapsule ||
+                if (!usesMeasuredCapsuleAlignment ||
                     tabViewportLeftInWindowPx.isNaN() ||
                     selectedItemLeftInWindowPx.isNaN()
                 ) {
@@ -1178,6 +1188,30 @@ private fun LightweightHomeTopTabs(
         } else {
             iosCapsuleTargetTranslationXPx
         }
+        val dockCapsuleTranslationXPx by remember(
+            measuredSelectedItemLeftPx,
+            md3LiquidCapsuleTranslationXPx,
+            dockIndicatorHorizontalGap,
+            density,
+            pagerIsDragging,
+            pagerIsScrolling,
+            topTabDragActive
+        ) {
+            derivedStateOf {
+                val horizontalGapPx = with(density) { dockIndicatorHorizontalGap.toPx() }
+                val measuredLeft = measuredSelectedItemLeftPx
+                if (!topTabDragActive && !pagerIsDragging && !pagerIsScrolling &&
+                    measuredLeft != null && !measuredLeft.isNaN()
+                ) {
+                    resolveTopTabDockIndicatorOffsetPx(
+                        slotTranslationPx = measuredLeft,
+                        horizontalGapPx = horizontalGapPx
+                    )
+                } else {
+                    md3LiquidCapsuleTranslationXPx
+                }
+            }
+        }
         Row(
             modifier = Modifier
                 .fillMaxSize()
@@ -1198,122 +1232,11 @@ private fun LightweightHomeTopTabs(
                         tabViewportLeftInWindowPx = coordinates.boundsInWindow().left
                     }
             ) {
-                if (shouldUseMovingIosCapsule) {
-                    val capsuleShape = resolveSharedBottomBarCapsuleShape()
-                    val indicatorWidth = resolveTopTabDockIndicatorWidthDp(
-                        itemWidthDp = itemWidth.value,
-                        horizontalGapDp = dockIndicatorHorizontalGap.value
-                    ).dp
-                    KernelSuMiuixBottomBarIndicatorLayer(
-                        visible = true,
-                        dockContentAlpha = 1f,
-                        indicatorTranslationXPx = resolveTopTabDockIndicatorOffsetPx(
-                            slotTranslationPx = iosCapsuleTranslationXPx,
-                            horizontalGapPx = with(density) {
-                                dockIndicatorHorizontalGap.toPx()
-                            }
-                        ),
-                        indicatorPanelOffsetPx = if (shouldUseLiquidGlassIndicator) {
-                            topTabPanelOffsetPx
-                        } else {
-                            0f
-                        },
-
-                        indicatorWidth = indicatorWidth,
-                        indicatorHeight = dockIndicatorHeight,
-                        shellShape = capsuleShape,
-
-                        contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
-                        backdrop = null,
-                        indicatorLensSpec = topTabIndicatorLensSpec,
-                        effectivePressProgress = topTabPressProgress,
-                        indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
-                            darkTheme = isDarkTheme
-                        ),
-                        glassEnabled = shouldUseLiquidGlassIndicator,
-                        indicatorEffectsEnabled = shouldUseLiquidGlassIndicator,
-                        motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
-                        isDragging = topTabShouldStretchIndicator,
-                        indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
-                        indicatorLayerScaleTransform = if (topTabDragActive) {
-                            topTabIndicatorLayerScaleTransform
-                        } else {
-                            null
-                        },
-                        bottomBarMotionSpec = topTabDragMotionSpec,
-                        isDarkTheme = isDarkTheme
-                    )
-                }
-                if (shouldUseMd3DockBackedCapsule) {
-                    KernelSuMiuixBottomBarIndicatorLayer(
-                        visible = true,
-                        dockContentAlpha = 1f,
-                        indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
-                        indicatorPanelOffsetPx = topTabPanelOffsetPx,
-
-                        indicatorWidth = md3LiquidCapsuleWidth,
-                        indicatorHeight = dockIndicatorHeight,
-                        shellShape = resolveSharedBottomBarCapsuleShape(),
-
-                        contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
-                        backdrop = null,
-                        indicatorLensSpec = topTabIndicatorLensSpec,
-                        effectivePressProgress = topTabPressProgress,
-                        indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
-                            darkTheme = isDarkTheme
-                        ),
-                        glassEnabled = true,
-                        motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
-                        isDragging = topTabShouldStretchIndicator,
-                        indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
-                        indicatorLayerScaleTransform = if (topTabDragActive) {
-                            topTabIndicatorLayerScaleTransform
-                        } else {
-                            null
-                        },
-                        bottomBarMotionSpec = topTabDragMotionSpec,
-                        isDarkTheme = isDarkTheme
-                    )
-                }
-                if (shouldUseMd3LiquidCapsule) {
-                    val capsuleShape = resolveSharedBottomBarCapsuleShape()
-                    KernelSuMiuixBottomBarIndicatorLayer(
-                        visible = true,
-                        dockContentAlpha = 1f,
-                        indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
-                        indicatorPanelOffsetPx = topTabPanelOffsetPx,
-
-                        indicatorWidth = md3LiquidCapsuleWidth,
-                        indicatorHeight = dockIndicatorHeight,
-                        shellShape = capsuleShape,
-
-                        contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
-                        backdrop = null,
-                        indicatorLensSpec = topTabIndicatorLensSpec,
-                        effectivePressProgress = topTabPressProgress,
-                        indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
-                            darkTheme = isDarkTheme
-                        ),
-                        glassEnabled = true,
-                        motionProgress = topTabMotionProgress,
-                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
-                        isDragging = topTabShouldStretchIndicator,
-                        indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
-                        indicatorLayerScaleTransform = if (topTabDragActive) {
-                            topTabIndicatorLayerScaleTransform
-                        } else {
-                            null
-                        },
-                        bottomBarMotionSpec = topTabDragMotionSpec,
-                        isDarkTheme = isDarkTheme
-                    )
-                }
                 LazyRow(
                     state = listState,
                     modifier = Modifier
                         .fillMaxSize()
+                        .zIndex(1f)
                         .run {
                             if (shouldPrimeTopTabLiquidGlassCapture) {
                                 miuixLayerBackdrop(topTabContentBackdrop)
@@ -1342,7 +1265,7 @@ private fun LightweightHomeTopTabs(
                             skinPlainStyle = skinPlainStyle,
                             hasSkinStickerIcon = hasSkinStickerIcons
                         ) && !usesSharedCapsuleIndicator
-                        val measuredItemModifier = if (shouldUseMovingIosCapsule && index == selectedIndex) {
+                        val measuredItemModifier = if (usesMeasuredCapsuleAlignment && index == selectedIndex) {
                             Modifier.onGloballyPositioned { coordinates ->
                                 selectedItemLeftInWindowPx = coordinates.boundsInWindow().left
                             }
@@ -1400,6 +1323,115 @@ private fun LightweightHomeTopTabs(
                         )
                     }
                 }
+                if (shouldUseMovingIosCapsule) {
+                    val capsuleShape = resolveSharedBottomBarCapsuleShape()
+                    val indicatorWidth = resolveTopTabDockIndicatorWidthDp(
+                        itemWidthDp = itemWidth.value,
+                        horizontalGapDp = dockIndicatorHorizontalGap.value
+                    ).dp
+                    KernelSuMiuixBottomBarIndicatorLayer(
+                        visible = true,
+                        dockContentAlpha = 1f,
+                        indicatorTranslationXPx = resolveTopTabDockIndicatorOffsetPx(
+                            slotTranslationPx = iosCapsuleTranslationXPx,
+                            horizontalGapPx = with(density) {
+                                dockIndicatorHorizontalGap.toPx()
+                            }
+                        ),
+                        indicatorPanelOffsetPx = if (shouldUseLiquidGlassIndicator) {
+                            topTabPanelOffsetPx
+                        } else {
+                            0f
+                        },
+                        indicatorWidth = indicatorWidth,
+                        indicatorHeight = dockIndicatorHeight,
+                        shellShape = capsuleShape,
+                        contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
+                        backdrop = miuixBackdrop,
+                        indicatorLensSpec = topTabIndicatorLensSpec,
+                        effectivePressProgress = topTabPressProgress,
+                        indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
+                            darkTheme = isDarkTheme
+                        ),
+                        glassEnabled = shouldUseLiquidGlassIndicator,
+                        indicatorEffectsEnabled = shouldUseLiquidGlassIndicator,
+                        motionProgress = topTabMotionProgress,
+                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
+                        isDragging = topTabShouldStretchIndicator,
+                        indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                        indicatorLayerScaleTransform = if (topTabDragActive) {
+                            topTabIndicatorLayerScaleTransform
+                        } else {
+                            null
+                        },
+                        bottomBarMotionSpec = topTabDragMotionSpec,
+                        isDarkTheme = isDarkTheme,
+                        indicatorZIndex = 0f
+                    )
+                }
+                if (shouldUseMd3DockBackedCapsule) {
+                    KernelSuMiuixBottomBarIndicatorLayer(
+                        visible = true,
+                        dockContentAlpha = 1f,
+                        indicatorTranslationXPx = dockCapsuleTranslationXPx,
+                        indicatorPanelOffsetPx = topTabPanelOffsetPx,
+                        indicatorWidth = md3LiquidCapsuleWidth,
+                        indicatorHeight = dockIndicatorHeight,
+                        shellShape = resolveSharedBottomBarCapsuleShape(),
+                        contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
+                        backdrop = miuixBackdrop,
+                        indicatorLensSpec = topTabIndicatorLensSpec,
+                        effectivePressProgress = topTabPressProgress,
+                        indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
+                            darkTheme = isDarkTheme
+                        ),
+                        glassEnabled = true,
+                        motionProgress = topTabMotionProgress,
+                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
+                        isDragging = topTabShouldStretchIndicator,
+                        indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                        indicatorLayerScaleTransform = if (topTabDragActive) {
+                            topTabIndicatorLayerScaleTransform
+                        } else {
+                            null
+                        },
+                        bottomBarMotionSpec = topTabDragMotionSpec,
+                        isDarkTheme = isDarkTheme,
+                        indicatorZIndex = 0f
+                    )
+                }
+                if (shouldUseMd3LiquidCapsule) {
+                    val capsuleShape = resolveSharedBottomBarCapsuleShape()
+                    KernelSuMiuixBottomBarIndicatorLayer(
+                        visible = true,
+                        dockContentAlpha = 1f,
+                        indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
+                        indicatorPanelOffsetPx = topTabPanelOffsetPx,
+                        indicatorWidth = md3LiquidCapsuleWidth,
+                        indicatorHeight = dockIndicatorHeight,
+                        shellShape = capsuleShape,
+                        contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
+                        backdrop = miuixBackdrop,
+                        indicatorLensSpec = topTabIndicatorLensSpec,
+                        effectivePressProgress = topTabPressProgress,
+                        indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
+                            darkTheme = isDarkTheme
+                        ),
+                        glassEnabled = true,
+                        motionProgress = topTabMotionProgress,
+                        velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
+                        isDragging = topTabShouldStretchIndicator,
+                        indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
+                        indicatorLayerScaleTransform = if (topTabDragActive) {
+                            topTabIndicatorLayerScaleTransform
+                        } else {
+                            null
+                        },
+                        bottomBarMotionSpec = topTabDragMotionSpec,
+                        isDarkTheme = isDarkTheme,
+                        indicatorZIndex = 0f
+                    )
+                }
                 if (effectiveRenderer == HomeTopTabRenderer.MD3 && !hasSkinStickerIcons) {
                     val indicatorColor = if (skinPlainStyle && skinPlainContentColor != null) {
                         resolveHomeSkinTopTabIndicatorColor(skinPlainContentColor)
@@ -1426,7 +1458,7 @@ private fun LightweightHomeTopTabs(
                             shellShape = AppShapes.container(ContainerLevel.Pill),
     
                             contentBackdrop = effectiveTopTabIndicatorContentBackdrop,
-                            backdrop = null,
+                            backdrop = miuixBackdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabPressProgress,
                             indicatorIdleSurfaceColor = indicatorColor.copy(alpha = 0.42f),
@@ -1442,7 +1474,8 @@ private fun LightweightHomeTopTabs(
                             },
                             bottomBarMotionSpec = topTabDragMotionSpec,
                             isDarkTheme = isDarkTheme,
-                            indicatorAlignment = Alignment.BottomStart
+                            indicatorAlignment = Alignment.BottomStart,
+                            indicatorZIndex = 0f
                         )
                     } else if (!shouldUseMd3DockBackedCapsule) {
                         Box(
@@ -1689,6 +1722,7 @@ fun CategoryTabRow(
     liquidGlassTuning: LiquidGlassTuning? = null,
     hazeState: HazeState? = null,
     backdrop: LayerBackdrop? = null,
+    miuixBackdrop: MiuixBackdrop? = null,
     isFloatingStyle: Boolean = false,
     edgeToEdge: Boolean = false,
     hasOuterChromeSurface: Boolean = false,
@@ -1741,6 +1775,7 @@ fun CategoryTabRow(
         liquidGlassStyle = liquidGlassStyle,
         liquidGlassTuning = liquidGlassTuning,
         backdrop = backdrop,
+        miuixBackdrop = miuixBackdrop,
         topTabSkinIconPaths = topTabSkinIconPaths,
         partitionSkinIconPath = partitionSkinIconPath,
         hasOuterChromeSurface = hasOuterChromeSurface,

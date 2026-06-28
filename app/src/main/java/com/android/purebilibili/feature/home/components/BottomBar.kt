@@ -3977,7 +3977,8 @@ internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     bottomBarMotionSpec: com.android.purebilibili.core.ui.motion.BottomBarMotionSpec,
     isDarkTheme: Boolean,
     swapMotionAxes: Boolean = false,
-    indicatorAlignment: Alignment = Alignment.CenterStart
+    indicatorAlignment: Alignment = Alignment.CenterStart,
+    indicatorZIndex: Float = 2f
 ) {
     if (!visible) return
     val rawIndicatorLayerTransform = if (indicatorEffectsEnabled) {
@@ -4020,7 +4021,7 @@ internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
             .width(indicatorWidth)
             .height(indicatorHeight)
             .align(indicatorAlignment)
-            .zIndex(2f)
+            .zIndex(indicatorZIndex)
             .run {
                 if (indicatorBackdrop != null) {
                     miuixDrawBackdrop(
