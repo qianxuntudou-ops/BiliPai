@@ -1086,7 +1086,10 @@ private fun LightweightHomeTopTabs(
             !hasOuterChromeSurface
         val shouldUseMd3LiquidCapsule = effectiveRenderer == HomeTopTabRenderer.MD3 &&
             shouldRenderTopTabLiquidGlassIndicator
-        val shouldUseMd3DockBackedCapsule = effectiveRenderer == HomeTopTabRenderer.MD3 &&
+        val shouldUseMd3DockBackedCapsule = (
+            effectiveRenderer == HomeTopTabRenderer.MD3 ||
+                effectiveRenderer == HomeTopTabRenderer.MIUIX
+            ) &&
             shouldUseLiquidGlassIndicator &&
             hasOuterChromeSurface
         val shouldPrimeTopTabLiquidGlassCapture =
@@ -1106,7 +1109,10 @@ private fun LightweightHomeTopTabs(
         )
         val topTabContentBackdrop = rememberMiuixLayerBackdrop()
         val topTabIndicatorContentBackdrop = topTabContentBackdrop
-        val effectiveTopTabIndicatorContentBackdrop = if (shouldRenderTopTabIndicatorBackdrop) {
+        val topTabIndicatorBackdropAlwaysOn = shouldUseLiquidGlassIndicator
+        val effectiveTopTabIndicatorContentBackdrop = if (
+            topTabIndicatorBackdropAlwaysOn || shouldRenderTopTabIndicatorBackdrop
+        ) {
             topTabIndicatorContentBackdrop
         } else {
             null
@@ -1246,8 +1252,9 @@ private fun LightweightHomeTopTabs(
                         backdrop = null,
                         indicatorLensSpec = topTabIndicatorLensSpec,
                         effectivePressProgress = topTabPressProgress,
-                        indicatorIdleSurfaceColor = resolveAndroidNativeIdleIndicatorSurfaceColor(
-                            darkTheme = isDarkTheme
+                        indicatorIdleSurfaceColor = resolveIosTopTabCapsuleContainerColor(
+                            isDarkTheme = isDarkTheme,
+                            selectionFraction = 1f
                         ),
                         glassEnabled = true,
                         motionProgress = topTabMotionProgress,
@@ -1279,11 +1286,10 @@ private fun LightweightHomeTopTabs(
                         backdrop = null,
                         indicatorLensSpec = topTabIndicatorLensSpec,
                         effectivePressProgress = topTabPressProgress,
-                        indicatorIdleSurfaceColor = if (isDarkTheme) {
-                            Color.White.copy(alpha = 0.1f)
-                        } else {
-                            Color.Black.copy(alpha = 0.1f)
-                        },
+                        indicatorIdleSurfaceColor = resolveIosTopTabCapsuleContainerColor(
+                            isDarkTheme = isDarkTheme,
+                            selectionFraction = 1f
+                        ),
                         glassEnabled = true,
                         motionProgress = topTabMotionProgress,
                         velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,

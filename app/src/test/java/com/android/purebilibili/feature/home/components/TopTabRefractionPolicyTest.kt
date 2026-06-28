@@ -379,7 +379,9 @@ class TopTabRefractionPolicyTest {
         )
 
         assertTrue(source.contains("val shouldUseMd3LiquidCapsule = effectiveRenderer == HomeTopTabRenderer.MD3"))
-        assertTrue(source.contains("val shouldUseMd3DockBackedCapsule = effectiveRenderer == HomeTopTabRenderer.MD3"))
+        assertTrue(source.contains("val shouldUseMd3DockBackedCapsule = ("))
+        assertTrue(source.contains("effectiveRenderer == HomeTopTabRenderer.MIUIX"))
+        assertTrue(source.contains("topTabIndicatorBackdropAlwaysOn = shouldUseLiquidGlassIndicator"))
         assertTrue(source.contains("indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress"))
         assertTrue(source.contains("indicatorHeight = dockIndicatorHeight"))
     }
