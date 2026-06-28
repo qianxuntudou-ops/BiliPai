@@ -1279,7 +1279,25 @@ fun ElegantVideoCard(
                 }
 
                 if (secondaryStatText != null) {
+                    var danmakuModifier = Modifier.wrapContentSize()
+                    if (metadataSharedEnabled) {
+                        with(requireNotNull(sharedTransitionScope)) {
+                            danmakuModifier = danmakuModifier.sharedBounds(
+                                sharedContentState = rememberSharedContentState(
+                                    key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(
+                                        video.bvid,
+                                        sourceRoute = effectiveSharedElementSourceRoute
+                                    )
+                                ),
+                                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
+                                boundsTransform = { _, _ ->
+                                    videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
+                                }
+                            )
+                        }
+                    }
                     HomeVideoBadgePill(
+                        modifier = danmakuModifier,
                         style = badgeStylePolicy.infoStyle,
                         shape = AppShapes.container(ContainerLevel.Pill),
                         containerColor = inlinePillColors.containerColor,

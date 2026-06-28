@@ -40,7 +40,8 @@ internal enum class VideoSharedElement {
     UP_ACTION,
     AVATAR,
     VIEWS,
-    DANMAKU
+    DANMAKU,
+    DURATION
 }
 
 internal fun videoCardShellSharedElementKey(
@@ -138,6 +139,17 @@ internal fun videoDanmakuSharedElementKey(
     return BiliPaiSharedElementKey.Video(
         bvid = bvid,
         element = VideoSharedElement.DANMAKU,
+        sourceRoute = sourceRoute
+    )
+}
+
+internal fun videoDurationSharedElementKey(
+    bvid: String,
+    sourceRoute: String? = null
+): BiliPaiSharedElementKey.Video {
+    return BiliPaiSharedElementKey.Video(
+        bvid = bvid,
+        element = VideoSharedElement.DURATION,
         sourceRoute = sourceRoute
     )
 }
