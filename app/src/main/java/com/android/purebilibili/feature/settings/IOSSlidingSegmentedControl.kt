@@ -38,7 +38,7 @@ import com.android.purebilibili.core.ui.adaptiveSquircleBackground
 import com.android.purebilibili.feature.home.components.BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_HEIGHT_DP
 import com.android.purebilibili.feature.home.components.BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP
 import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
-import com.kyant.backdrop.Backdrop
+import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
 import top.yukonga.miuix.kmp.basic.TabRow as MiuixTabRow
 import top.yukonga.miuix.kmp.basic.TabRowDefaults as MiuixTabRowDefaults
 
@@ -158,7 +158,7 @@ internal fun <T> IOSSlidingSegmentedControl(
     height: Dp = BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_HEIGHT_DP.dp,
     indicatorHeight: Dp = BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP.dp,
     labelFontSize: TextUnit = 14.sp,
-    backdrop: Backdrop? = null,
+    miuixBackdrop: MiuixBackdrop? = null,
     tapPressRefractionEnabled: Boolean = true,
     onSelectionChange: (T) -> Unit
 ) {
@@ -195,7 +195,7 @@ internal fun <T> IOSSlidingSegmentedControl(
         height = height,
         indicatorHeight = indicatorHeight,
         labelFontSize = labelFontSize,
-        backdrop = backdrop,
+        miuixBackdrop = miuixBackdrop,
         tapPressRefractionEnabled = tapPressRefractionEnabled,
         onSelectionChange = onSelectionChange
     )
@@ -374,7 +374,7 @@ private fun <T> IOSSlidingSegmentedControlImpl(
     height: Dp = BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_HEIGHT_DP.dp,
     indicatorHeight: Dp = BOTTOM_BAR_LIQUID_SEGMENTED_CONTROL_INDICATOR_HEIGHT_DP.dp,
     labelFontSize: TextUnit = 14.sp,
-    backdrop: Backdrop? = null,
+    miuixBackdrop: MiuixBackdrop? = null,
     tapPressRefractionEnabled: Boolean = true,
     onSelectionChange: (T) -> Unit
 ) {
@@ -392,7 +392,7 @@ private fun <T> IOSSlidingSegmentedControlImpl(
         height = height,
         indicatorHeight = indicatorHeight,
         labelFontSize = labelFontSize,
-        backdrop = backdrop,
+        miuixBackdrop = miuixBackdrop,
         forceLiquidChrome = forceLiquidIndicator,
         tapPressRefractionEnabled = tapPressRefractionEnabled
     )

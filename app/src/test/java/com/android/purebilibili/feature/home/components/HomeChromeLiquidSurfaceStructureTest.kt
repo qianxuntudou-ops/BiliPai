@@ -167,12 +167,12 @@ class HomeChromeLiquidSurfaceStructureTest {
             topBarSource.contains("val shouldRenderTopTabLiquidGlassIndicator = shouldUseLiquidGlassIndicator") &&
                 topBarSource.contains("!hasOuterChromeSurface") &&
                 topBarSource.contains("val shouldUseMd3DockBackedCapsule =") &&
-                topBarSource.contains("KernelSuBottomBarIndicatorLayer(") &&
+                topBarSource.contains("KernelSuMiuixBottomBarIndicatorLayer(") &&
                 topBarSource.contains("val shouldPrimeTopTabLiquidGlassCapture =") &&
-                topBarSource.contains("val topTabContentBackdrop = rememberLayerBackdrop()") &&
+                topBarSource.contains("val topTabContentBackdrop = rememberMiuixLayerBackdrop()") &&
                 topBarSource.contains("val topTabIndicatorContentBackdrop = topTabContentBackdrop") &&
                 !topBarSource.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)") &&
-                topBarSource.contains("layerBackdrop(topTabContentBackdrop)") &&
+                topBarSource.contains("miuixLayerBackdrop(topTabContentBackdrop)") &&
                 topBarSource.contains("shouldRenderBottomBarIndicatorBackdrop(") &&
                 topBarSource.contains("allowIdleGlassEffect = false") &&
                 topBarSource.contains("contentBackdrop = effectiveTopTabIndicatorContentBackdrop") &&

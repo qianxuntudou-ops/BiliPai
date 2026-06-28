@@ -90,8 +90,9 @@ import com.android.purebilibili.core.ui.animation.rememberDampedDragAnimationSta
 import com.android.purebilibili.core.ui.adaptive.MotionTier
 import com.android.purebilibili.core.ui.blur.currentUnifiedBlurIntensity
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
@@ -1103,7 +1104,7 @@ private fun LightweightHomeTopTabs(
             allowIdleGlassEffect = false,
             allowTransitionIndicatorPulse = topTabPressProgress > 0.001f
         )
-        val topTabContentBackdrop = rememberLayerBackdrop()
+        val topTabContentBackdrop = rememberMiuixLayerBackdrop()
         val topTabIndicatorContentBackdrop = topTabContentBackdrop
         val effectiveTopTabIndicatorContentBackdrop = if (shouldRenderTopTabIndicatorBackdrop) {
             topTabIndicatorContentBackdrop
@@ -1188,7 +1189,7 @@ private fun LightweightHomeTopTabs(
                         itemWidthDp = itemWidth.value,
                         horizontalGapDp = dockIndicatorHorizontalGap.value
                     ).dp
-                    KernelSuBottomBarIndicatorLayer(
+                    KernelSuMiuixBottomBarIndicatorLayer(
                         visible = true,
                         dockContentAlpha = 1f,
                         indicatorTranslationXPx = resolveTopTabDockIndicatorOffsetPx(
@@ -1202,7 +1203,7 @@ private fun LightweightHomeTopTabs(
                         } else {
                             0f
                         },
-                        indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
+
                         indicatorWidth = indicatorWidth,
                         indicatorHeight = dockIndicatorHeight,
                         shellShape = capsuleShape,
@@ -1231,12 +1232,12 @@ private fun LightweightHomeTopTabs(
                     )
                 }
                 if (shouldUseMd3DockBackedCapsule) {
-                    KernelSuBottomBarIndicatorLayer(
+                    KernelSuMiuixBottomBarIndicatorLayer(
                         visible = true,
                         dockContentAlpha = 1f,
                         indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
                         indicatorPanelOffsetPx = topTabPanelOffsetPx,
-                        indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
+
                         indicatorWidth = md3LiquidCapsuleWidth,
                         indicatorHeight = dockIndicatorHeight,
                         shellShape = resolveSharedBottomBarCapsuleShape(),
@@ -1264,12 +1265,12 @@ private fun LightweightHomeTopTabs(
                 }
                 if (shouldUseMd3LiquidCapsule) {
                     val capsuleShape = resolveSharedBottomBarCapsuleShape()
-                    KernelSuBottomBarIndicatorLayer(
+                    KernelSuMiuixBottomBarIndicatorLayer(
                         visible = true,
                         dockContentAlpha = 1f,
                         indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
                         indicatorPanelOffsetPx = topTabPanelOffsetPx,
-                        indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
+
                         indicatorWidth = md3LiquidCapsuleWidth,
                         indicatorHeight = dockIndicatorHeight,
                         shellShape = capsuleShape,
@@ -1303,7 +1304,7 @@ private fun LightweightHomeTopTabs(
                         .fillMaxSize()
                         .run {
                             if (shouldPrimeTopTabLiquidGlassCapture) {
-                                layerBackdrop(topTabContentBackdrop)
+                                miuixLayerBackdrop(topTabContentBackdrop)
                             } else {
                                 this
                             }
@@ -1394,7 +1395,7 @@ private fun LightweightHomeTopTabs(
                         resolveMd3TopTabIndicatorBottomPadding()
                     }
                     if (shouldRenderTopTabLiquidGlassIndicator && !shouldUseMd3LiquidCapsule) {
-                        KernelSuBottomBarIndicatorLayer(
+                        KernelSuMiuixBottomBarIndicatorLayer(
                             visible = true,
                             dockContentAlpha = 1f,
                             indicatorTranslationXPx = md3IndicatorTranslationXPx,
@@ -1402,7 +1403,7 @@ private fun LightweightHomeTopTabs(
                                 indicatorBottomPadding.toPx()
                             },
                             indicatorPanelOffsetPx = topTabPanelOffsetPx,
-                            indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
+    
                             indicatorWidth = md3IndicatorWidth,
                             indicatorHeight = 4.dp,
                             shellShape = AppShapes.container(ContainerLevel.Pill),

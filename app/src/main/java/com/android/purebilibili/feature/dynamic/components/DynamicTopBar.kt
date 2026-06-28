@@ -36,7 +36,7 @@ import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmented
 import com.android.purebilibili.feature.home.components.SegmentedControlChromeStyle
 import com.android.purebilibili.feature.home.components.resolveSegmentedControlChromeStyle
 import com.android.purebilibili.feature.home.components.resolveSegmentedControlLiquidGlassEnabled
-import com.kyant.backdrop.Backdrop
+import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
 import dev.chrisbanes.haze.HazeState
 
 //  动态页面布局模式
@@ -57,7 +57,7 @@ fun DynamicTopBarWithTabs(
     displayMode: DynamicDisplayMode = DynamicDisplayMode.SIDEBAR,
     onDisplayModeChange: (DynamicDisplayMode) -> Unit = {},
     hazeState: HazeState? = null,
-    backdrop: Backdrop? = null
+    miuixBackdrop: MiuixBackdrop? = null
 ) {
     val density = LocalDensity.current
     val context = LocalContext.current
@@ -70,7 +70,7 @@ fun DynamicTopBarWithTabs(
     val statusBarHeight = WindowInsets.statusBars.getTop(density).let { with(density) { it.toDp() } }
     val liquidTabSpec = resolveDynamicTopBarLiquidTabSpec()
     val reusesLiquidGlassDock = shouldReuseDynamicTopBarLiquidGlassDock(
-        hasBackdrop = backdrop != null,
+        hasBackdrop = miuixBackdrop != null,
         storedLiquidGlassEnabled = homeSettings.isBottomBarLiquidGlassEnabled,
         uiPreset = uiPreset,
         androidNativeLiquidGlassEnabled = homeSettings.androidNativeLiquidGlassEnabled
@@ -117,7 +117,7 @@ fun DynamicTopBarWithTabs(
                     tabs = tabs,
                     onTabSelected = onTabSelected,
                     modifier = Modifier.weight(1f),
-                    backdrop = backdrop
+                    miuixBackdrop = miuixBackdrop
                 )
                 
                 //  布局模式切换按钮
@@ -148,7 +148,7 @@ private fun DynamicCompactTabRow(
     tabs: List<String>,
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    backdrop: Backdrop? = null
+    miuixBackdrop: MiuixBackdrop? = null
 ) {
     BottomBarLiquidSegmentedControl(
         items = tabs,
@@ -159,7 +159,7 @@ private fun DynamicCompactTabRow(
         indicatorHeight = 36.dp,
         labelFontSize = 14.sp,
         preferInlineContentStyle = true,
-        backdrop = backdrop
+        miuixBackdrop = miuixBackdrop
     )
 }
 

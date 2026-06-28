@@ -17,13 +17,13 @@ class TopTabRefractionPolicyTest {
         assertTrue(source.contains("shouldUseMovingIosCapsule"))
         assertTrue(source.contains("shouldUseLiquidGlassIndicator"))
         assertFalse(source.contains("shouldForceDragLiquidGlassIndicator"))
-        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
         assertFalse(source.contains("BottomBarLiquidIndicatorSurface("))
         assertTrue(source.contains("resolveBottomBarRefractionMotionProfile("))
         assertTrue(source.contains("resolveBottomBarBackdropPresetIndicatorLens("))
         assertTrue(source.contains("topTabShouldStretchIndicator"))
         assertTrue(source.contains("val shouldPrimeTopTabLiquidGlassCapture ="))
-        assertTrue(source.contains("val topTabContentBackdrop = rememberLayerBackdrop()"))
+        assertTrue(source.contains("val topTabContentBackdrop = rememberMiuixLayerBackdrop()"))
         assertTrue(source.contains("val topTabIndicatorContentBackdrop = topTabContentBackdrop"))
         assertFalse(source.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)"))
         assertTrue(source.contains("contentBackdrop = effectiveTopTabIndicatorContentBackdrop"))
@@ -359,7 +359,7 @@ class TopTabRefractionPolicyTest {
         assertTrue(source.contains("resolveTopTabIndicatorRenderPosition("))
         assertTrue(source.contains("pagerCurrentPageOffsetFraction = pagerState?.currentPageOffsetFraction"))
         assertTrue(source.contains("resolveTopTabClickAction(index, selectedIndex)"))
-        assertTrue(source.contains("KernelSuBottomBarIndicatorLayer("))
+        assertTrue(source.contains("KernelSuMiuixBottomBarIndicatorLayer("))
         assertFalse(source.contains("BottomBarLiquidIndicatorSurface("))
         assertFalse(source.contains("LiquidIndicator("))
         assertFalse(source.contains("SimpleLiquidIndicator("))
@@ -369,7 +369,7 @@ class TopTabRefractionPolicyTest {
         assertFalse(source.contains("rememberCombinedBackdrop(backdrop, tabsBackdrop)"))
         assertFalse(source.contains("rememberCombinedBackdrop(backdrop, topTabContentBackdrop)"))
         assertTrue(source.contains("if (shouldPrimeTopTabLiquidGlassCapture)"))
-        assertTrue(source.contains("layerBackdrop(topTabContentBackdrop)"))
+        assertTrue(source.contains("miuixLayerBackdrop(topTabContentBackdrop)"))
     }
 
     @Test

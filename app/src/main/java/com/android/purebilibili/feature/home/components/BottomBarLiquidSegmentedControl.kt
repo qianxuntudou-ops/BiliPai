@@ -68,16 +68,15 @@ import com.android.purebilibili.core.ui.motion.BottomBarMotionProfile
 import com.android.purebilibili.core.ui.motion.BottomBarMotionSpec
 import com.android.purebilibili.core.ui.motion.MotionSpringConfig
 import com.android.purebilibili.core.ui.motion.resolveBottomBarMotionSpec
-import com.kyant.backdrop.Backdrop
-import com.kyant.backdrop.backdrops.layerBackdrop
-import com.kyant.backdrop.backdrops.rememberLayerBackdrop
-import com.kyant.backdrop.drawBackdrop
-import com.kyant.backdrop.effects.blur
-import com.kyant.backdrop.effects.lens
-import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.shadow.InnerShadow
-import com.kyant.backdrop.shadow.Shadow
+import com.android.purebilibili.feature.home.components.liquid.rememberCombinedBackdrop as rememberMiuixCombinedBackdrop
+import com.android.purebilibili.feature.home.components.liquid.lens as miuixLens
+import com.android.purebilibili.feature.home.components.liquid.vibrancy as miuixVibrancy
+import top.yukonga.miuix.kmp.blur.Backdrop as MiuixBackdrop
+import top.yukonga.miuix.kmp.blur.blur as miuixBlur
+import top.yukonga.miuix.kmp.blur.drawBackdrop as miuixDrawBackdrop
+import top.yukonga.miuix.kmp.blur.layerBackdrop as miuixLayerBackdrop
+import top.yukonga.miuix.kmp.blur.highlight.Highlight as MiuixHighlight
+import top.yukonga.miuix.kmp.blur.rememberLayerBackdrop as rememberMiuixLayerBackdrop
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.sign
@@ -180,7 +179,7 @@ internal fun BottomBarLiquidIndicatorSurface(
     modifier: Modifier = Modifier,
     shape: Shape = resolveSharedBottomBarCapsuleShape(),
     liquidGlassEnabled: Boolean,
-    backdrop: Backdrop? = null,
+    backdrop: MiuixBackdrop? = null,
     hasExternalBackdrop: Boolean = backdrop != null,
     indicatorLensSpec: BottomBarBackdropPresetLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
         progress = if (liquidGlassEnabled) 1f else 0f
@@ -209,27 +208,21 @@ internal fun BottomBarLiquidIndicatorSurface(
                     hasExternalBackdrop = hasExternalBackdrop
                 )
             ) {
-                drawBackdrop(
+                miuixDrawBackdrop(
                     backdrop = backdrop,
                     shape = { shape },
                     effects = {
-                        lens(
+                        miuixLens(
                             refractionHeight = indicatorLensSpec.refractionHeightDp.dp.toPx(),
                             refractionAmount = indicatorLensSpec.refractionAmountDp.dp.toPx(),
                             depthEffect = true,
-                            chromaticAberration = true
+                            chromaticAberration = 0.5f
                         )
                     },
                     highlight = {
-                        Highlight.Default.copy(alpha = maxOf(indicatorHighlightAlpha, indicatorGlowAlpha))
-                    },
-                    shadow = {
-                        Shadow(alpha = indicatorGlowAlpha)
-                    },
-                    innerShadow = {
-                        InnerShadow(
-                            radius = 8.dp * indicatorGlowAlpha,
-                            alpha = indicatorGlowAlpha
+                        MiuixHighlight(
+                            width = 1.dp,
+                            alpha = maxOf(indicatorHighlightAlpha, indicatorGlowAlpha)
                         )
                     },
                     layerBlock = layerBlock,
@@ -388,7 +381,7 @@ fun BottomBarLiquidSegmentedControl(
     dragSelectionEnabled: Boolean = true,
     preferInlineContentStyle: Boolean = false,
     forceLiquidChrome: Boolean = false,
-    backdrop: Backdrop? = null,
+    miuixBackdrop: MiuixBackdrop? = null,
     tapPressRefractionEnabled: Boolean = true,
     containerColorOverride: Color? = null,
     selectedTextColorOverride: Color? = null,
@@ -441,7 +434,6 @@ fun BottomBarLiquidSegmentedControl(
     val safeSelectedIndex = selectedIndex.coerceIn(0, itemCount - 1)
     val motionSpec = remember { resolveSegmentedControlMotionSpec() }
     val clickPulseKey = remember { mutableIntStateOf(0) }
-    val clickPulseTransform = rememberBottomBarClickPulseTransform(clickPulseKey.intValue)
     val dragState = rememberDampedDragAnimationState(
         initialIndex = safeSelectedIndex,
         itemCount = itemCount,
@@ -573,9 +565,12 @@ fun BottomBarLiquidSegmentedControl(
                 }
             }
         }
-        val tabsBackdrop = rememberLayerBackdrop()
-        val containerBackdrop = backdrop ?: tabsBackdrop
-        val contentBackdrop = tabsBackdrop
+        val tabsBackdrop = rememberMiuixLayerBackdrop()
+        val indicatorContentBackdrop = if (miuixBackdrop != null && liquidGlassEnabled) {
+            rememberMiuixCombinedBackdrop(miuixBackdrop, tabsBackdrop)
+        } else {
+            tabsBackdrop
+        }
         val backdropPresetProgress = resolveBottomBarBackdropPresetProgress(
             motionProgress = motionProgress,
             verticalProgress = 0f,
@@ -602,9 +597,9 @@ fun BottomBarLiquidSegmentedControl(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .kernelSuFloatingDockSurface(
+                .kernelSuMiuixFloatingDockSurface(
                     shape = containerShape,
-                    backdrop = backdrop,
+                    backdrop = miuixBackdrop,
                     containerColor = containerColor,
                     blurEnabled = liquidGlassEnabled,
                     glassEnabled = liquidGlassEnabled,
@@ -621,25 +616,20 @@ fun BottomBarLiquidSegmentedControl(
                 .matchParentSize()
                 .clearAndSetSemantics {}
                 .alpha(0f)
-                .layerBackdrop(tabsBackdrop)
+                .miuixLayerBackdrop(tabsBackdrop)
                 .graphicsLayer { translationX = panelOffsetPx }
                 .run {
-                    if (backdrop != null && liquidGlassEnabled) {
-                        drawBackdrop(
-                            backdrop = containerBackdrop,
+                    if (miuixBackdrop != null && liquidGlassEnabled) {
+                        miuixDrawBackdrop(
+                            backdrop = miuixBackdrop,
                             shape = { containerShape },
                             effects = {
-                                vibrancy()
-                                blur(androidNativeTuning.shellBlurRadiusDp.dp.toPx())
-                                lens(
+                                miuixVibrancy()
+                                miuixBlur(4.dp.toPx(), 4.dp.toPx())
+                                miuixLens(
                                     refractionHeight = captureLensSpec.refractionHeightDp.dp.toPx(),
-                                    refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx(),
-                                    depthEffect = true,
-                                    chromaticAberration = true
+                                    refractionAmount = captureLensSpec.refractionAmountDp.dp.toPx()
                                 )
-                            },
-                            highlight = {
-                                Highlight.Default.copy(alpha = captureHighlightAlpha)
                             },
                             onDrawSurface = {
                                 drawRect(containerColor)
@@ -670,17 +660,16 @@ fun BottomBarLiquidSegmentedControl(
             )
         }
 
-        KernelSuBottomBarIndicatorLayer(
+        KernelSuMiuixBottomBarIndicatorLayer(
             visible = true,
             dockContentAlpha = 1f,
             indicatorTranslationXPx = with(density) { indicatorOffset.toPx() },
             indicatorPanelOffsetPx = panelOffsetPx,
-            indicatorSettleReboundTransform = clickPulseTransform,
             indicatorWidth = indicatorWidth,
             indicatorHeight = resolvedIndicatorHeight,
             shellShape = indicatorShape,
-            contentBackdrop = contentBackdrop,
-            backdrop = backdrop,
+            contentBackdrop = indicatorContentBackdrop,
+            backdrop = miuixBackdrop,
             indicatorLensSpec = indicatorLensSpec,
             effectivePressProgress = tapPressProgress,
             indicatorIdleSurfaceColor = indicatorIdleSurfaceColorOverride
