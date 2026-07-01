@@ -509,7 +509,7 @@ class iOSHomeHeaderVisualPolicyTest {
         assertEquals(14.dp, resolveHomeTopSearchRowHorizontalPadding())
         assertEquals(16.dp, resolveHomeTopSearchRowHorizontalPadding(UiPreset.MD3))
         assertEquals(44.dp, resolveHomeTopSearchPillHeight())
-        assertEquals(44.dp, resolveHomeTopSearchPillHeight(UiPreset.MD3))
+        assertEquals(56.dp, resolveHomeTopSearchPillHeight(UiPreset.MD3))
         assertEquals(2.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true))
         assertEquals(2.dp, resolveHomeTopTabHorizontalPadding(isTabFloating = true, uiPreset = UiPreset.MD3))
         assertEquals(4.dp, resolveHomeTopSearchToTabsSpacing())
@@ -678,9 +678,9 @@ class iOSHomeHeaderVisualPolicyTest {
         assertTrue(searchShape is RoundedCornerShape)
         assertTrue(edgeShape is RoundedCornerShape)
         assertNotEquals(CircleShape, edgeShape)
-        assertEquals(44.dp, resolveHomeTopSearchPillHeight(UiPreset.MD3))
+        assertEquals(56.dp, resolveHomeTopSearchPillHeight(UiPreset.MD3))
         assertEquals(16.dp, resolveHomeTopSearchContentHorizontalPadding(UiPreset.MD3))
-        assertEquals(8.dp, resolveHomeTopSearchIconTextGap(UiPreset.MD3))
+        assertEquals(12.dp, resolveHomeTopSearchIconTextGap(UiPreset.MD3))
     }
 
     @Test
@@ -704,7 +704,7 @@ class iOSHomeHeaderVisualPolicyTest {
             )
         )
         assertEquals(
-            44.dp,
+            48.dp,
             resolveHomeTopSearchPillHeight(
                 uiPreset = UiPreset.MD3,
                 androidNativeVariant = AndroidNativeVariant.MIUIX
@@ -893,7 +893,7 @@ class iOSHomeHeaderVisualPolicyTest {
         )
 
         assertTrue(appearance.isFloating)
-        assertTrue(appearance.blurEnabled)
+        assertFalse(appearance.blurEnabled)
         assertFalse(appearance.liquidGlassEnabled)
     }
 
