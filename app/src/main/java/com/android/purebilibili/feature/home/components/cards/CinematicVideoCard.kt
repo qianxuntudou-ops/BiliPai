@@ -64,9 +64,8 @@ import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpe
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
-import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.HapticType
@@ -180,10 +179,11 @@ fun CinematicVideoCard(
         hasAnimatedVisibilityScope = animatedVisibilityScope != null
     )
     val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
-    val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
-        coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = isQuickReturnLimited
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = effectiveSharedElementSourceRoute,
+        transitionEnabled = coverSharedEnabled
     )
+    val cardShellShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
@@ -210,6 +210,15 @@ fun CinematicVideoCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .videoCardShellSharedBoundsOrEmpty(
+                    enabled = useCardShellSharedBounds,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    bvid = video.bvid,
+                    sourceRoute = effectiveSharedElementSourceRoute,
+                    motionSpec = cardSharedTransitionMotionSpec,
+                    clipShape = cardShellShape
+                )
                 .clip(RoundedCornerShape(cardCornerRadius))
                 .background(Color.Black) // 纯黑底色
                 .pointerInput(Unit) {
@@ -230,32 +239,6 @@ fun CinematicVideoCard(
                 .fillMaxWidth()
                 .aspectRatio(VIDEO_SHARED_COVER_ASPECT_RATIO) // 统一共享比例
             
-            // 共享元素: 封面
-            val finalCoverModifier = if (coverSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    coverModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = videoCoverSharedElementKey(
-                                video.bvid,
-                                sourceRoute = effectiveSharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            if (cardSharedTransitionMotionSpec.enabled) {
-                                tween(
-                                    durationMillis = cardSharedTransitionMotionSpec.durationMillis,
-                                    easing = cardSharedTransitionMotionSpec.easing
-                                )
-                            } else {
-                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                            }
-                        },
-                        clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(cardCornerRadius))
-                    )
-                }
-            } else coverModifier
-
             Box(modifier = Modifier.clip(RoundedCornerShape(cardCornerRadius))) {
                  AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
@@ -264,7 +247,7 @@ fun CinematicVideoCard(
                         .memoryCacheKey("cover_${video.bvid}_cis")
                         .build(),
                     contentDescription = null,
-                    modifier = finalCoverModifier, // 无视差
+                    modifier = coverModifier,
                     contentScale = ContentScale.Crop
                 )
             }
@@ -293,23 +276,6 @@ fun CinematicVideoCard(
                     .align(Alignment.BottomStart)
                     .padding(16.dp) 
             ) {
-                // 标题
-                 var titleModifier = Modifier.fillMaxWidth().semantics { contentDescription = "视频标题: ${video.title}" }
-                if (metadataSharedEnabled) {
-                    with(requireNotNull(sharedTransitionScope)) {
-                        titleModifier = titleModifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(
-                                    video.bvid,
-                                    sourceRoute = effectiveSharedElementSourceRoute
-                                )
-                            ),
-                            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                            boundsTransform = { _, _ -> videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec) }
-                        )
-                    }
-                }
-
                 Text(
                     text = video.title,
                     maxLines = 2,
@@ -319,7 +285,9 @@ fun CinematicVideoCard(
                         color = Color.White,
                         fontSize = 18.sp
                     ),
-                    modifier = titleModifier
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .semantics { contentDescription = "视频标题: ${video.title}" }
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -329,57 +297,22 @@ fun CinematicVideoCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                     var upNameModifier = Modifier.wrapContentSize()
-                     if (metadataSharedEnabled) {
-                         with(requireNotNull(sharedTransitionScope)) {
-                            upNameModifier = upNameModifier.sharedBounds(
-                                sharedContentState = rememberSharedContentState(
-                                    key = com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey(
-                                        video.bvid,
-                                        sourceRoute = effectiveSharedElementSourceRoute
-                                    )
-                                ),
-                                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                boundsTransform = { _, _ -> videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec) }
-                             )
-                         }
-                     }
                      UpBadgeName(
                          name = video.owner.name,
                          leadingContent = if (video.owner.face.isNotEmpty()) {
                              {
-                                 var avatarModifier = Modifier
-                                     .size(20.dp)
-                                     .clip(CircleShape)
-                                     .background(Color.White.copy(alpha = 0.2f))
-
-                                 if (metadataSharedEnabled) {
-                                     with(requireNotNull(sharedTransitionScope)) {
-                                         avatarModifier = avatarModifier.sharedBounds(
-                                             sharedContentState = rememberSharedContentState(
-                                                 key = com.android.purebilibili.core.ui.transition.videoAvatarSharedElementKey(
-                                                     video.bvid,
-                                                     sourceRoute = effectiveSharedElementSourceRoute
-                                                 )
-                                             ),
-                                             animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                             boundsTransform = { _, _ ->
-                                                 videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                                             },
-                                             clipInOverlayDuringTransition = OverlayClip(CircleShape)
-                                         )
-                                     }
-                                 }
-
                                  AsyncImage(
-                                     model = ImageRequest.Builder(LocalContext.current)
-                                         .data(FormatUtils.fixImageUrl(video.owner.face))
-                                         .size(64)
-                                         .crossfade(true)
-                                         .build(),
-                                     contentDescription = null,
-                                     modifier = avatarModifier,
-                                     contentScale = ContentScale.Crop
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(FormatUtils.fixImageUrl(video.owner.face))
+                                        .size(64)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .size(20.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f)),
+                                    contentScale = ContentScale.Crop
                                  )
                              }
                          } else null,
@@ -389,8 +322,7 @@ fun CinematicVideoCard(
                          nameColor = Color.White.copy(alpha = 0.9f),
                          badgeTextColor = Color.White.copy(alpha = 0.92f),
                          badgeBorderColor = Color.White.copy(alpha = 0.45f),
-                         showUpBadge = showUpBadge,
-                         modifier = upNameModifier
+                         showUpBadge = showUpBadge
                      )
                      
                      // 播放量

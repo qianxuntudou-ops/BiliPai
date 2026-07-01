@@ -2,20 +2,21 @@ package com.android.purebilibili.feature.watchlater
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class WatchLaterSharedTransitionStructureTest {
 
     @Test
-    fun watchLaterVideoCard_usesHomeStyleVideoSharedElements() {
+    fun watchLaterVideoCard_usesWholeCardShellSharedBounds() {
         val source = File("src/main/java/com/android/purebilibili/feature/watchlater/WatchLaterScreen.kt")
             .readText()
 
         assertTrue(source.contains("CardPositionManager.recordVideoCardPosition"))
-        assertTrue(source.contains("videoCoverSharedElementKey("))
-        assertTrue(source.contains("videoTitleSharedElementKey("))
-        assertTrue(source.contains("videoUpNameSharedElementKey("))
-        assertTrue(source.contains("videoViewsSharedElementKey("))
+        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(source.contains("videoTitleSharedElementKey("))
+        assertFalse(source.contains("videoUpNameSharedElementKey("))
+        assertFalse(source.contains("videoViewsSharedElementKey("))
         assertTrue(source.contains("sourceRoute = sourceRoute"))
     }
 }

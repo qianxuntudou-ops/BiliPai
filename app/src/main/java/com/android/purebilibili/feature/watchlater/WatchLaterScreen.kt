@@ -62,11 +62,8 @@ import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpe
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionPlaybackIntent
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
-import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.data.model.response.VideoItem
 import com.android.purebilibili.data.model.response.Owner
 import com.android.purebilibili.data.model.response.Stat
@@ -973,73 +970,26 @@ private fun WatchLaterVideoCard(
         )
     }
     val coverShape = RoundedCornerShape(sharedTransitionVisualSpec.sourceCornerDp.dp)
-    val coverModifier = if (sharedElementReady) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoCoverSharedElementKey(
-                        item.bvid,
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ ->
-                    if (sharedTransitionMotionSpec.enabled) {
-                        tween(
-                            durationMillis = sharedTransitionMotionSpec.durationMillis,
-                            easing = sharedTransitionMotionSpec.easing
-                        )
-                    } else {
-                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                    }
-                },
-                clipInOverlayDuringTransition = OverlayClip(coverShape)
-            )
-        }
-    } else {
-        Modifier
-    }
-    var titleModifier: Modifier = Modifier
-    var upNameModifier: Modifier = Modifier
-    var viewsModifier: Modifier = Modifier
-    if (sharedElementReady) {
-        with(requireNotNull(sharedTransitionScope)) {
-            titleModifier = titleModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoTitleSharedElementKey(
-                        item.bvid,
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ -> videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec) }
-            )
-            upNameModifier = upNameModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoUpNameSharedElementKey(
-                        item.bvid,
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ -> videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec) }
-            )
-            viewsModifier = viewsModifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoViewsSharedElementKey(
-                        item.bvid,
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ -> videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec) }
-            )
-        }
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sourceRoute,
+        transitionEnabled = sharedElementReady
+    )
+    val cardShellShape = remember(sharedTransitionVisualSpec) {
+        RoundedCornerShape(12.dp)
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = item.bvid,
+                sourceRoute = sourceRoute,
+                motionSpec = sharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
             .height(IntrinsicSize.Min)
             .onGloballyPositioned { coordinates ->
                 cardBoundsRef.value = coordinates.boundsInRoot()
@@ -1068,7 +1018,7 @@ private fun WatchLaterVideoCard(
     ) {
         // 封面
         Box(
-            modifier = coverModifier
+            modifier = Modifier
                 .width(140.dp)
                 .aspectRatio(16f / 9f)
                 .clip(coverShape)
@@ -1108,8 +1058,7 @@ private fun WatchLaterVideoCard(
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = titleModifier
+                color = MaterialTheme.colorScheme.onSurface
             )
             
             Spacer(modifier = Modifier.height(4.dp))
@@ -1119,15 +1068,13 @@ private fun WatchLaterVideoCard(
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = upNameModifier
+                overflow = TextOverflow.Ellipsis
             )
             
             Text(
                 text = "${formatNumber(item.stat.view)}播放",
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                modifier = viewsModifier
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
             )
         }
 

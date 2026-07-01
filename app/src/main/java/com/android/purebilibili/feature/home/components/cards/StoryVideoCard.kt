@@ -57,9 +57,8 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
-import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
 import com.android.purebilibili.feature.video.ui.section.resolveCompactPublishTimeRowText
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
@@ -190,9 +189,9 @@ fun StoryVideoCard(
         hasAnimatedVisibilityScope = animatedVisibilityScope != null
     )
     val isQuickReturnLimited = isReturningFromVideoDetail && isQuickReturningFromVideoDetail
-    val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
-        coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = isQuickReturnLimited
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = effectiveSharedElementSourceRoute,
+        transitionEnabled = coverSharedEnabled
     )
     val cardSharedTransitionMotionSpec = remember(
         effectiveSharedElementSourceRoute,
@@ -206,35 +205,7 @@ fun StoryVideoCard(
         )
     }
     
-    val cardModifier = if (coverSharedEnabled) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = videoCoverSharedElementKey(
-                            video.bvid,
-                            sourceRoute = effectiveSharedElementSourceRoute
-                        )
-                    ),
-                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                    boundsTransform = { _, _ ->
-                        if (cardSharedTransitionMotionSpec.enabled) {
-                            tween(
-                                durationMillis = cardSharedTransitionMotionSpec.durationMillis,
-                                easing = cardSharedTransitionMotionSpec.easing
-                            )
-                        } else {
-                            com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                        }
-                    },
-                    clipInOverlayDuringTransition = OverlayClip(
-                        RoundedCornerShape(cardCornerRadius)
-                    )
-                )
-        }
-    } else {
-        Modifier
-    }
+    val cardShellShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
@@ -246,6 +217,15 @@ fun StoryVideoCard(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                motionSpec = cardSharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
             .padding(horizontal = cardHorizontalPadding, vertical = 8.dp)
             //  [修复] 进场动画 - 使用 Unit 作为 key，避免分类切换时重新动画
             .animateEnter(
@@ -291,7 +271,7 @@ fun StoryVideoCard(
     ) {
         // 卡片容器 (封面)
         Box(
-            modifier = cardModifier
+            modifier = Modifier
                 .fillMaxWidth()
                 .testTag("home_story_video_cover")
                 .aspectRatio(coverAspectRatio)
@@ -351,26 +331,6 @@ fun StoryVideoCard(
         
         Spacer(modifier = Modifier.height(if (compactMetadata) 8.dp else 12.dp))
         
-        //  标题
-        // 🔗 [共享元素] 标题
-        var titleModifier = Modifier.fillMaxWidth()
-        if (metadataSharedEnabled) {
-            with(requireNotNull(sharedTransitionScope)) {
-                titleModifier = titleModifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(
-                            video.bvid,
-                            sourceRoute = effectiveSharedElementSourceRoute
-                        )
-                    ),
-                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                    boundsTransform = { _, _ ->
-                        videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                    }
-                )
-            }
-        }
-        
         Text(
             text = video.title,
             color = MaterialTheme.colorScheme.onSurface,
@@ -379,7 +339,7 @@ fun StoryVideoCard(
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             lineHeight = if (compactMetadata) 20.sp else 23.sp,
-            modifier = titleModifier
+            modifier = Modifier.fillMaxWidth()
         )
 
         VideoCardDurationPublishRow(
@@ -397,28 +357,11 @@ fun StoryVideoCard(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.fillMaxWidth()
         ) {
-            // UP主名称
-            // 🔗 [共享元素] UP主名称
-            var upNameModifier = Modifier.wrapContentSize()
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    upNameModifier = upNameModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey(
-                                video.bvid,
-                                sourceRoute = effectiveSharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                        }
-                    )
-                }
-            }
             val upClickMid = video.owner.mid.takeIf { it > 0L && onUpClick != null }
-            if (upClickMid != null) {
-                upNameModifier = upNameModifier.clickable { onUpClick?.invoke(upClickMid) }
+            val upNameModifier = if (upClickMid != null) {
+                Modifier.wrapContentSize().clickable { onUpClick?.invoke(upClickMid) }
+            } else {
+                Modifier.wrapContentSize()
             }
             
             UpBadgeName(
@@ -429,35 +372,15 @@ fun StoryVideoCard(
                 ),
                 leadingContent = if (video.owner.face.isNotEmpty()) {
                     {
-                        var avatarModifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-
-                        if (metadataSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                avatarModifier = avatarModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoAvatarSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = effectiveSharedElementSourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                                    },
-                                    clipInOverlayDuringTransition = OverlayClip(CircleShape)
-                                )
-                            }
-                        }
-
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(FormatUtils.fixImageUrl(video.owner.face))
                                 .crossfade(100)
                                 .build(),
                             contentDescription = null,
-                            modifier = avatarModifier,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     }
@@ -484,26 +407,7 @@ fun StoryVideoCard(
                 ) {
                     // 播放量
                     if (video.stat.view > 0) {
-                         // 🔗 [共享元素] 播放量
-                        var viewsModifier = Modifier.wrapContentSize()
-                        if (metadataSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                viewsModifier = viewsModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = effectiveSharedElementSourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                                    }
-                                )
-                            }
-                        }
-                        
-                        Box(modifier = viewsModifier) {
+                        Box {
                              Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(2.dp)
@@ -526,26 +430,7 @@ fun StoryVideoCard(
 
                     // 弹幕数 (仅当有播放量时显示，保持逻辑一致)
                     if (video.stat.view > 0 && video.stat.danmaku > 0) {
-                         // 🔗 [共享元素] 弹幕数
-                         var danmakuModifier = Modifier.wrapContentSize()
-                         if (metadataSharedEnabled) {
-                             with(requireNotNull(sharedTransitionScope)) {
-                                 danmakuModifier = danmakuModifier.sharedBounds(
-                                     sharedContentState = rememberSharedContentState(
-                                         key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(
-                                             video.bvid,
-                                             sourceRoute = effectiveSharedElementSourceRoute
-                                         )
-                                     ),
-                                     animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                     boundsTransform = { _, _ ->
-                                         videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                                     }
-                                 )
-                             }
-                         }
-
-                         Box(modifier = danmakuModifier) {
+                         Box {
                              Row(
                                  verticalAlignment = Alignment.CenterVertically,
                                  horizontalArrangement = Arrangement.spacedBy(2.dp)

@@ -60,7 +60,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun homeVideoTransition_usesCoverAsPrimaryAnchor() {
+    fun homeVideoTransition_usesWholeCardShellWithoutMetadataBounds() {
         val policy = resolveVideoSharedTransitionOwnership(
             sourceRoute = "home",
             coverSharedEnabled = true,
@@ -68,8 +68,8 @@ class VideoSharedTransitionPolicyTest {
         )
 
         assertTrue(policy.useCoverSharedBounds)
-        // Home 源也启用 metadata sharedBounds，标题、UP主等独立过渡
-        assertTrue(policy.useMetadataSharedBounds)
+        assertTrue(policy.useCardContainerSharedBounds)
+        assertFalse(policy.useMetadataSharedBounds)
     }
 
     @Test
@@ -89,7 +89,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun nonHomeVideoTransition_keepsMetadataSharedBoundsWhenAvailable() {
+    fun nonHomeVideoTransition_usesWholeCardShellWithoutMetadataBounds() {
         val policy = resolveVideoSharedTransitionOwnership(
             sourceRoute = "search",
             coverSharedEnabled = true,
@@ -97,7 +97,43 @@ class VideoSharedTransitionPolicyTest {
         )
 
         assertTrue(policy.useCoverSharedBounds)
-        assertTrue(policy.useMetadataSharedBounds)
+        assertTrue(policy.useCardContainerSharedBounds)
+        assertFalse(policy.useMetadataSharedBounds)
+    }
+
+    @Test
+    fun videoCardShellSharedBounds_enabledForAllVideoSourcesWhenTransitionOn() {
+        assertTrue(shouldUseVideoCardShellSharedBounds("home", transitionEnabled = true))
+        assertTrue(shouldUseVideoCardShellSharedBounds("dynamic", transitionEnabled = true))
+        assertTrue(shouldUseVideoCardShellSharedBounds("watch_later", transitionEnabled = true))
+        assertTrue(shouldUseVideoCardShellSharedBounds("partition", transitionEnabled = true))
+        assertTrue(shouldUseVideoCardShellSharedBounds("space", transitionEnabled = true))
+        assertTrue(shouldUseVideoCardShellSharedBounds("video", transitionEnabled = true))
+        assertFalse(shouldUseVideoCardShellSharedBounds("home", transitionEnabled = false))
+        assertFalse(shouldUseVideoCardShellSharedBounds(null, transitionEnabled = true))
+    }
+
+    @Test
+    fun videoSharedTransitionBackdrop_onlyAppliesToUnderlyingSourceDuringSharedVideoRoute() {
+        val enabled = resolveVideoSharedTransitionBackdropFrame(
+            cardTransitionEnabled = true,
+            sharedElementRouteTransition = true,
+            transitionInProgress = true,
+            entryInvolvesVideoDetail = true,
+            entryIsUnderlyingSource = true
+        )
+        val disabled = resolveVideoSharedTransitionBackdropFrame(
+            cardTransitionEnabled = false,
+            sharedElementRouteTransition = true,
+            transitionInProgress = true,
+            entryInvolvesVideoDetail = true,
+            entryIsUnderlyingSource = true
+        )
+
+        assertTrue(enabled.enabled)
+        assertEquals(5f, enabled.blurRadiusDp)
+        assertTrue(enabled.scrimAlpha > 0f)
+        assertFalse(disabled.enabled)
     }
 
     @Test
@@ -199,7 +235,7 @@ class VideoSharedTransitionPolicyTest {
     }
 
     @Test
-    fun videoMetadataSharedBounds_avoidGenericSpatialOrSpringSpecs() {
+    fun videoCardSources_useWholeCardShellSharedBoundsWithoutMetadataKeys() {
         val homeCardSource = File(
             "src/main/java/com/android/purebilibili/feature/home/components/cards/VideoCard.kt"
         ).readText()
@@ -224,22 +260,26 @@ class VideoSharedTransitionPolicyTest {
         val spaceSource = File(
             "src/main/java/com/android/purebilibili/feature/space/SpaceScreen.kt"
         ).readText()
+        val navHostSource = File(
+            "src/main/java/com/android/purebilibili/navigation3/BiliPaiNavDisplayHost.kt"
+        ).readText()
 
-        assertTrue(homeCardSource.contains("videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)"))
-        assertFalse(homeCardSource.contains("AppMotionTokens.spatialSpec()"))
-        assertTrue(detailInfoSource.contains("resolveVideoMetadataSharedTransitionMotionSpec("))
-        assertTrue(detailInfoSource.contains("videoMetadataSharedElementBoundsTransformSpec(metadataSharedTransitionMotionSpec)"))
-        assertFalse(detailInfoSource.contains("spring(dampingRatio = 0.8f, stiffness = 200f)"))
-        assertTrue(partitionSource.contains("videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec)"))
-        assertFalse(partitionSource.contains("spring(dampingRatio = 0.8f, stiffness = 200f)"))
-        assertTrue(cinematicCardSource.contains("videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)"))
-        assertFalse(cinematicCardSource.contains("spring(dampingRatio = 0.8f, stiffness = 200f)"))
-        assertTrue(glassCardSource.contains("videoTitleSharedElementKey("))
-        assertTrue(glassCardSource.contains("sourceRoute = effectiveSharedElementSourceRoute"))
-        assertTrue(glassCardSource.contains("videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)"))
-        assertTrue(dynamicCardSource.contains("videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec)"))
-        assertTrue(watchLaterSource.contains("videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec)"))
-        assertTrue(spaceSource.contains("videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)"))
+        assertTrue(homeCardSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(homeCardSource.contains("videoTitleSharedElementKey("))
+        assertTrue(detailInfoSource.contains("useCardContainerSharedBounds = useCardContainerSharedBounds"))
+        assertTrue(partitionSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(partitionSource.contains("videoTitleSharedElementKey("))
+        assertTrue(cinematicCardSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(cinematicCardSource.contains("videoTitleSharedElementKey("))
+        assertTrue(glassCardSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(glassCardSource.contains("videoTitleSharedElementKey("))
+        assertTrue(dynamicCardSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(dynamicCardSource.contains("videoTitleSharedElementKey("))
+        assertTrue(watchLaterSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(watchLaterSource.contains("videoTitleSharedElementKey("))
+        assertTrue(spaceSource.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(spaceSource.contains("videoTitleSharedElementKey("))
+        assertTrue(navHostSource.contains("VideoSharedTransitionBackdropHost("))
     }
 
     @Test

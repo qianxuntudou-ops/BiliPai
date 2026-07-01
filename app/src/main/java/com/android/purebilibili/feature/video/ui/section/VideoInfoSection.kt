@@ -62,6 +62,7 @@ import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpe
 import com.android.purebilibili.core.ui.transition.resolveVideoMetadataSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
 import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
 import com.android.purebilibili.data.model.response.BgmDetailData
 import com.android.purebilibili.data.model.response.BgmInfo
@@ -331,9 +332,14 @@ fun VideoTitleWithDesc(
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null
     )
+    val useCardContainerSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sourceRouteForSharedElement,
+        transitionEnabled = coverSharedEnabled
+    )
     val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
         coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = isQuickReturnLimitedForSharedElements
+        isQuickReturnLimited = isQuickReturnLimitedForSharedElements,
+        useCardContainerSharedBounds = useCardContainerSharedBounds
     )
     val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
     val metadataSharedTransitionMotionSpec = remember(
@@ -710,9 +716,14 @@ fun UpInfoSection(
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null
     )
+    val useCardContainerSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sourceRouteForSharedElement,
+        transitionEnabled = coverSharedEnabled
+    )
     val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
         coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = isQuickReturnLimitedForSharedElements
+        isQuickReturnLimited = isQuickReturnLimitedForSharedElements,
+        useCardContainerSharedBounds = useCardContainerSharedBounds
     )
     val sharedTransitionSpeedSettings = LocalVideoSharedTransitionSpeedSettings.current
     val metadataSharedTransitionMotionSpec = remember(

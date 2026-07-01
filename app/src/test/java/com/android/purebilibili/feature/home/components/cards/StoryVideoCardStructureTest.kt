@@ -8,14 +8,12 @@ import kotlin.test.assertTrue
 class StoryVideoCardStructureTest {
 
     @Test
-    fun storySharedMetadataUsesShorterBoundsTimelineWithoutSpringOvershoot() {
+    fun storyCardUsesWholeCardShellSharedBoundsWithoutMetadataKeys() {
         val source = File("src/main/java/com/android/purebilibili/feature/home/components/cards/StoryVideoCard.kt")
             .readText()
-        val sharedTimelineCall = "videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)"
 
-        assertTrue(
-            source.windowed(sharedTimelineCall.length).count { it == sharedTimelineCall } >= 5
-        )
+        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertFalse(source.contains("videoTitleSharedElementKey("))
         assertFalse(source.contains("spring(dampingRatio = 0.8f, stiffness = 200f)"))
     }
 

@@ -68,8 +68,8 @@ class RelatedVideoItemPolicyTest {
             .substringAfter("// Video cover")
             .substringBefore("AsyncImage(")
 
-        assertTrue(source.contains("val cardShellModifier = if (coverSharedEnabled)"))
-        assertTrue(surfaceBlock.contains(".then(cardShellModifier)"))
+        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
+        assertTrue(surfaceBlock.contains("videoCardShellSharedBoundsOrEmpty("))
         assertFalse(coverBlock.contains("videoCardShellSharedElementKey("))
     }
 

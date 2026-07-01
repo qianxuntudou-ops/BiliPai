@@ -75,8 +75,7 @@ import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionP
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.store.SettingsManager
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
 import com.android.purebilibili.feature.home.resolveHomeCardInfoSurfaceAppearance
 import com.android.purebilibili.feature.home.HomeGlassPillStyle
@@ -601,7 +600,7 @@ fun ElegantVideoCard(
         }
         val homeSharedTransitionMotionSpec = homeSharedTransitionSpecs.motion
         val homeSharedTransitionVisualSpec = homeSharedTransitionSpecs.visual
-        val useCoverOnlySharedBounds = coverSharedEnabled && !effectiveSharedElementSourceRoute.isNullOrBlank()
+        val useCardShellSharedBounds = sharedTransitionOwnership.useCardContainerSharedBounds
         val thisCardVideoSourceKey = remember(video.bvid, effectiveSharedElementSourceRoute) {
             val normalizedBvid = video.bvid.trim()
             val normalizedRoute = effectiveSharedElementSourceRoute
@@ -617,16 +616,26 @@ fun ElegantVideoCard(
             thisCardVideoSourceKey == CardPositionManager.lastClickedVideoSourceKey
         val coverCrossfadeEnabled = shouldEnableVideoCardCoverCrossfade(
             isReturningFromDetail = isReturningFromVideoDetail,
-            useCoverSharedBounds = useCoverOnlySharedBounds,
+            useCoverSharedBounds = useCardShellSharedBounds,
             isSharedReturnTarget = isCoverSharedReturnTarget
         )
-        val cardContainerModifier = Modifier.fillMaxWidth()
+        val cardShellShape = remember(cardCornerRadius) {
+            RoundedCornerShape(cardCornerRadius)
+        }
+        val cardContainerModifier = Modifier
+            .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                motionSpec = homeSharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
         Column(
             modifier = cardContainerModifier
         ) {
-            val metadataSharedEnabled = sharedTransitionOwnership.useMetadataSharedBounds
-            //  封面单独 sharedBounds 处理播放器 ↔ 封面映射（Shell 已移除，不再与 metadata 冲突）
-            val useCoverOnlySharedBounds = sharedTransitionOwnership.useCoverSharedBounds && !effectiveSharedElementSourceRoute.isNullOrBlank()
         //  [性能优化] 封面圆角形状缓存（避免重组时重复创建）
         val coverShape = remember(
             cardCornerRadius,
@@ -643,29 +652,6 @@ fun ElegantVideoCard(
             } else {
                 RoundedCornerShape(homeSharedTransitionVisualSpec.sourceCornerDp.dp)
             }
-        }
-
-        val coverModifier = if (useCoverOnlySharedBounds) {
-            with(requireNotNull(sharedTransitionScope)) {
-                Modifier.sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey(
-                            video.bvid,
-                            sourceRoute = effectiveSharedElementSourceRoute
-                        )
-                    ),
-                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                    boundsTransform = { _, _ ->
-                        tween(
-                            durationMillis = homeSharedTransitionMotionSpec.durationMillis,
-                            easing = homeSharedTransitionMotionSpec.easing
-                        )
-                    },
-                    clipInOverlayDuringTransition = OverlayClip(coverShape)
-                )
-            }
-        } else {
-            Modifier
         }
 
         Box(
@@ -702,22 +688,17 @@ fun ElegantVideoCard(
                     )
                 }
         ) {
-            //  [修复] sharedBounds 仅包裹封面图本身，渐变遮罩/统计标签等目标独有元素留在外部，
-            //  避免返回动画期间这些元素依赖 sharedBounds 叠加层初始化导致视觉滞后。
-            Box(modifier = coverModifier.fillMaxSize()) {
-                // 由 AsyncImage 根据卡片布局约束选择解码尺寸，避免高质量模式被固定像素限制清晰度。
-                AsyncImage(
-                    model = ImageRequest.Builder(LocalContext.current)
-                        .data(coverUrl)
-                        .crossfade(coverCrossfadeEnabled)
-                        .memoryCacheKey(coverCacheKey)
-                        .diskCacheKey(coverCacheKey)
-                        .build(),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-            }
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(coverUrl)
+                    .crossfade(coverCrossfadeEnabled)
+                    .memoryCacheKey(coverCacheKey)
+                    .diskCacheKey(coverCacheKey)
+                    .build(),
+                contentDescription = null,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = ContentScale.Crop
+            )
 
             if (premiumBadgeLabel != null) {
                 HomeVideoBadgePill(
@@ -816,23 +797,7 @@ fun ElegantVideoCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        var compactViewsModifier = Modifier.widthIn(min = compactStatsLayout.primaryMinWidthDp.dp)
-                        if (metadataSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                compactViewsModifier = compactViewsModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = effectiveSharedElementSourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                                    }
-                                )
-                            }
-                        }
+                        val compactViewsModifier = Modifier.widthIn(min = compactStatsLayout.primaryMinWidthDp.dp)
                         HomeVideoBadgePill(
                             modifier = compactViewsModifier,
                             style = badgeStylePolicy.coverStyle,
@@ -858,23 +823,7 @@ fun ElegantVideoCard(
                         }
 
                         if (compactStatsLayout.showSecondaryStat && secondaryStatText != null) {
-                            var compactDanmakuModifier = Modifier.widthIn(min = compactStatsLayout.secondaryMinWidthDp.dp)
-                            if (metadataSharedEnabled) {
-                                with(requireNotNull(sharedTransitionScope)) {
-                                    compactDanmakuModifier = compactDanmakuModifier.sharedBounds(
-                                        sharedContentState = rememberSharedContentState(
-                                            key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(
-                                                video.bvid,
-                                                sourceRoute = effectiveSharedElementSourceRoute
-                                            )
-                                        ),
-                                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                        boundsTransform = { _, _ ->
-                                            videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                                        }
-                                    )
-                                }
-                            }
+                            val compactDanmakuModifier = Modifier.widthIn(min = compactStatsLayout.secondaryMinWidthDp.dp)
                             HomeVideoBadgePill(
                                 modifier = compactDanmakuModifier,
                                 style = badgeStylePolicy.coverStyle,
@@ -1005,26 +954,9 @@ fun ElegantVideoCard(
         ) {
             //  [HIG] 标题 - 15sp Medium, 行高 20sp
             //  共享元素过渡 - 标题
-            var titleModifier = Modifier
+            val titleModifier = Modifier
                 .weight(1f)
                 .semantics { contentDescription = "视频标题: ${video.title}" }
-            
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    titleModifier = titleModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(
-                                video.bvid,
-                                sourceRoute = effectiveSharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                        }
-                    )
-                }
-            }
 
             Text(
                 text = highlightedTitle ?: AnnotatedString(video.title),
@@ -1137,39 +1069,7 @@ fun ElegantVideoCard(
                 upNameModifier = upNameModifier.clickable { onUpClick?.invoke(upClickMid) }
             }
             
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    upNameModifier = upNameModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey(
-                                video.bvid,
-                                sourceRoute = effectiveSharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                        }
-                    )
-                }
-            }
-            var followBadgeModifier = Modifier.wrapContentSize()
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    followBadgeModifier = followBadgeModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = com.android.purebilibili.core.ui.transition.videoUpActionSharedElementKey(
-                                video.bvid,
-                                sourceRoute = effectiveSharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                        }
-                    )
-                }
-            }
+            val followBadgeModifier = Modifier.wrapContentSize()
 
             UpBadgeName(
                 name = video.owner.name,
@@ -1207,28 +1107,10 @@ fun ElegantVideoCard(
                 } else null,
                 leadingContent = if (video.owner.face.isNotEmpty()) {
                     {
-                        var avatarModifier = Modifier
+                        val avatarModifier = Modifier
                             .size(14.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.surfaceVariant)
-
-                        if (metadataSharedEnabled) {
-                            with(requireNotNull(sharedTransitionScope)) {
-                                avatarModifier = avatarModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoAvatarSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = effectiveSharedElementSourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                    boundsTransform = { _, _ ->
-                                        videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                                    },
-                                    clipInOverlayDuringTransition = OverlayClip(CircleShape)
-                                )
-                            }
-                        }
 
                         AsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
@@ -1273,23 +1155,7 @@ fun ElegantVideoCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                var viewsRowModifier = Modifier.wrapContentSize()
-                if (metadataSharedEnabled) {
-                    with(requireNotNull(sharedTransitionScope)) {
-                        viewsRowModifier = viewsRowModifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(
-                                    video.bvid,
-                                    sourceRoute = effectiveSharedElementSourceRoute
-                                )
-                            ),
-                            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                            boundsTransform = { _, _ ->
-                                videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                            }
-                        )
-                    }
-                }
+                val viewsRowModifier = Modifier.wrapContentSize()
                 Box(modifier = viewsRowModifier) {
                     HomeVideoBadgePill(
                         style = badgeStylePolicy.infoStyle,
@@ -1313,23 +1179,7 @@ fun ElegantVideoCard(
                 }
 
                 if (secondaryStatText != null) {
-                    var danmakuModifier = Modifier.wrapContentSize()
-                    if (metadataSharedEnabled) {
-                        with(requireNotNull(sharedTransitionScope)) {
-                            danmakuModifier = danmakuModifier.sharedBounds(
-                                sharedContentState = rememberSharedContentState(
-                                    key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(
-                                        video.bvid,
-                                        sourceRoute = effectiveSharedElementSourceRoute
-                                    )
-                                ),
-                                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                boundsTransform = { _, _ ->
-                                    videoMetadataSharedElementBoundsTransformSpec(homeSharedTransitionMotionSpec)
-                                }
-                            )
-                        }
-                    }
+                    val danmakuModifier = Modifier.wrapContentSize()
                     HomeVideoBadgePill(
                         modifier = danmakuModifier,
                         style = badgeStylePolicy.infoStyle,

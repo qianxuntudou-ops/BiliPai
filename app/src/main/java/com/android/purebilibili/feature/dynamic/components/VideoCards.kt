@@ -47,9 +47,8 @@ import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransit
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionPlaybackIntent
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.store.SettingsManager
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
-import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.util.CardPositionManager
 import com.android.purebilibili.data.model.response.ArchiveMajor
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
@@ -123,11 +122,6 @@ fun VideoCardLarge(
             speedSettings = sharedTransitionSpeedSettings
         )
     }
-    val effectiveSharedElementKey = if (sharedElementReady) {
-        videoCoverSharedElementKey(archive.bvid, sourceRoute = sourceRoute)
-    } else {
-        sharedElementKey
-    }
     val videoSharedPlaybackIntent = remember(context) {
         resolveVideoSharedTransitionPlaybackIntent(
             clickToPlayEnabled = SettingsManager.getClickToPlaySync(context)
@@ -141,68 +135,40 @@ fun VideoCardLarge(
         )
     }
     val coverShape = RoundedCornerShape(sharedTransitionVisualSpec.sourceCornerDp.dp)
-    val coverModifier = if (
-        sharedTransitionEnabled &&
-        effectiveSharedElementKey != null &&
-        sharedTransitionScope != null &&
-        animatedVisibilityScope != null
-    ) {
-        with(sharedTransitionScope) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(key = effectiveSharedElementKey),
-                animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = { _, _ ->
-                    if (sharedTransitionMotionSpec.enabled) {
-                        tween(
-                            durationMillis = sharedTransitionMotionSpec.durationMillis,
-                            easing = sharedTransitionMotionSpec.easing
-                        )
-                    } else {
-                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                    }
-                },
-                clipInOverlayDuringTransition = OverlayClip(coverShape)
-            )
-        }
-    } else {
-        Modifier
-    }
-    val titleModifier = if (sharedElementReady) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoTitleSharedElementKey(
-                        archive.bvid,
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ -> videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec) }
-            )
-        }
-    } else {
-        Modifier
-    }
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sourceRoute,
+        transitionEnabled = sharedElementReady
+    )
 
-    Column(modifier = modifier) {
+    Column(
+        modifier = modifier
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = archive.bvid,
+                sourceRoute = sourceRoute,
+                motionSpec = sharedTransitionMotionSpec,
+                clipShape = coverShape
+            )
+            .onGloballyPositioned { coordinates ->
+                coverBoundsRef.value = coordinates.boundsInRoot()
+            }
+    ) {
         VideoCardLargeCover(
             archive = archive,
             coverUrl = coverUrl,
             context = context,
             isCollection = isCollection,
             cornerBadgeText = cornerBadgeText,
-            coverShape = coverShape,
-            modifier = coverModifier.onGloballyPositioned { coordinates ->
-                coverBoundsRef.value = coordinates.boundsInRoot()
-            }
+            coverShape = coverShape
         )
         Spacer(modifier = Modifier.height(6.dp))
         VideoCardLargeInfo(
             archive = archive,
             isCollection = isCollection,
             collectionTitle = collectionTitle,
-            publishTs = publishTs,
-            titleModifier = titleModifier
+            publishTs = publishTs
         )
     }
 }

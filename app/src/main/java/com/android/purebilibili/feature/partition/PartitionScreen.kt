@@ -78,7 +78,8 @@ import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransit
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionPlaybackIntent
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionVisualSpec
 import com.android.purebilibili.core.ui.transition.shouldEnableVideoCoverSharedTransition
-import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
 import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
 import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
@@ -879,9 +880,9 @@ private fun PartitionVideoRow(
         hasSharedTransitionScope = sharedTransitionScope != null,
         hasAnimatedVisibilityScope = animatedVisibilityScope != null
     ) && !sharedElementSourceRoute.isNullOrBlank()
-    val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
-        coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = false
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sharedElementSourceRoute,
+        transitionEnabled = coverSharedEnabled
     )
     val sharedTransitionMotionSpec = remember(
         sharedElementSourceRoute,
@@ -909,27 +910,8 @@ private fun PartitionVideoRow(
     val coverShape = remember(sharedTransitionVisualSpec) {
         RoundedCornerShape(sharedTransitionVisualSpec.sourceCornerDp.dp)
     }
-    val coverModifier = if (coverSharedEnabled) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoCoverSharedElementKey(
-                        video.bvid,
-                        sourceRoute = sharedElementSourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ ->
-                    tween(
-                        durationMillis = sharedTransitionMotionSpec.durationMillis,
-                        easing = sharedTransitionMotionSpec.easing
-                    )
-                },
-                clipInOverlayDuringTransition = OverlayClip(coverShape)
-            )
-        }
-    } else {
-        Modifier
+    val cardShellShape = remember(sharedTransitionVisualSpec) {
+        RoundedCornerShape(12.dp)
     }
     val triggerClick = {
         cardBoundsRef.value?.let { bounds ->
@@ -948,6 +930,15 @@ private fun PartitionVideoRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = video.bvid,
+                sourceRoute = sharedElementSourceRoute,
+                motionSpec = sharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
             .clip(RoundedCornerShape(12.dp))
             .onGloballyPositioned { coordinates ->
                 cardBoundsRef.value = coordinates.boundsInRoot()
@@ -962,7 +953,7 @@ private fun PartitionVideoRow(
                 .clip(coverShape)
                 .background(AppSurfaceTokens.cardContainer())
         ) {
-            Box(modifier = coverModifier.fillMaxSize()) {
+            Box(modifier = Modifier.fillMaxSize()) {
                 AsyncImage(
                     model = FormatUtils.resolveVideoCoverUrl(video.pic, useLowQuality = true),
                     contentDescription = video.title,
@@ -995,23 +986,6 @@ private fun PartitionVideoRow(
                 .heightIn(min = 82.dp)
                 .padding(vertical = 2.dp)
         ) {
-            var titleModifier: Modifier = Modifier.fillMaxWidth()
-            if (metadataSharedEnabled) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    titleModifier = titleModifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = videoTitleSharedElementKey(
-                                video.bvid,
-                                sourceRoute = sharedElementSourceRoute
-                            )
-                        ),
-                        animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                        boundsTransform = { _, _ ->
-                            videoMetadataSharedElementBoundsTransformSpec(sharedTransitionMotionSpec)
-                        }
-                    )
-                }
-            }
             Text(
                 text = video.title,
                 maxLines = 2,
@@ -1020,7 +994,7 @@ private fun PartitionVideoRow(
                 lineHeight = 22.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
-                modifier = titleModifier
+                modifier = Modifier.fillMaxWidth()
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(

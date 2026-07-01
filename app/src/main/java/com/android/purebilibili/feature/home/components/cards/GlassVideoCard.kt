@@ -55,10 +55,8 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
-import com.android.purebilibili.core.ui.transition.shouldEnableVideoMetadataSharedTransition
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
-import com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.feature.home.resolveHomeCardEnterAnimationEnabledAtMount
 import kotlin.math.roundToInt
 import com.android.purebilibili.feature.home.rememberHomeGlassPillColors
@@ -195,9 +193,9 @@ fun GlassVideoCard(
     val coverSharedEnabled = effectiveTransitionEnabled &&
         sharedTransitionScope != null &&
         animatedVisibilityScope != null
-    val metadataSharedEnabled = shouldEnableVideoMetadataSharedTransition(
-        coverSharedEnabled = coverSharedEnabled,
-        isQuickReturnLimited = false
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = effectiveSharedElementSourceRoute,
+        transitionEnabled = coverSharedEnabled
     )
     
     // 🌈 彩虹渐变边框色
@@ -213,36 +211,7 @@ fun GlassVideoCard(
         )
     }
     
-    //  卡片容器 - 支持共享元素过渡（受开关控制）
-    val cardModifier = if (coverSharedEnabled) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = videoCoverSharedElementKey(
-                            video.bvid,
-                            sourceRoute = effectiveSharedElementSourceRoute
-                        )
-                    ),
-                    animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                    boundsTransform = { _, _ ->
-                        if (cardSharedTransitionMotionSpec.enabled) {
-                            tween(
-                                durationMillis = cardSharedTransitionMotionSpec.durationMillis,
-                                easing = cardSharedTransitionMotionSpec.easing
-                            )
-                        } else {
-                            com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                        }
-                    },
-                    clipInOverlayDuringTransition = OverlayClip(
-                        RoundedCornerShape(cardCornerRadius)  // 过渡时保持动态圆角
-                    )
-                )
-        }
-    } else {
-        Modifier
-    }
+    val cardShellShape = remember(cardCornerRadius) { RoundedCornerShape(cardCornerRadius) }
     val enterAnimationEnabledAtMount = remember(video.bvid) {
         resolveHomeCardEnterAnimationEnabledAtMount(
             baseAnimationEnabled = animationEnabled,
@@ -252,8 +221,17 @@ fun GlassVideoCard(
     }
 
     Box(
-        modifier = cardModifier
+        modifier = Modifier
             .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = video.bvid,
+                sourceRoute = effectiveSharedElementSourceRoute,
+                motionSpec = cardSharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
             .padding(6.dp)
             //  [修复] 进场动画 - 使用 Unit 作为 key，避免分类切换时重新动画
             .animateEnter(
@@ -449,25 +427,6 @@ fun GlassVideoCard(
                         .padding(horizontal = 14.dp)
                         .padding(bottom = 14.dp)
                 ) {
-                    // 标题
-                    val titleModifier = if (metadataSharedEnabled) {
-                        with(requireNotNull(sharedTransitionScope)) {
-                            Modifier.sharedBounds(
-                                sharedContentState = rememberSharedContentState(
-                                    key = videoTitleSharedElementKey(
-                                        video.bvid,
-                                        sourceRoute = effectiveSharedElementSourceRoute
-                                    )
-                                ),
-                                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                                boundsTransform = { _, _ ->
-                                    videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                                }
-                            )
-                        }
-                    } else {
-                        Modifier
-                    }
                     Text(
                         text = video.title,
                         color = onSurface,
@@ -475,8 +434,7 @@ fun GlassVideoCard(
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        lineHeight = 19.sp,
-                        modifier = titleModifier
+                        lineHeight = 19.sp
                     )
                     
                     Spacer(modifier = Modifier.height(8.dp))

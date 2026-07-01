@@ -110,7 +110,8 @@ import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpe
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
-import com.android.purebilibili.core.ui.transition.videoMetadataSharedElementBoundsTransformSpec
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.core.ui.components.UserLevelBadge
 import com.android.purebilibili.core.util.FormatUtils
 import com.android.purebilibili.core.util.CardPositionManager
@@ -3019,36 +3020,24 @@ private fun SpaceArchiveListItemRow(
     val sharedTransitionReady = sharedTransitionKey != null &&
         sharedTransitionScope != null &&
         animatedVisibilityScope != null
-    val coverModifier = if (sharedTransitionReady) {
-        with(requireNotNull(sharedTransitionScope)) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoCoverSharedElementKey(
-                        bvid = requireNotNull(sharedTransitionKey),
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                boundsTransform = { _, _ ->
-                    if (cardSharedTransitionMotionSpec.enabled) {
-                        tween(
-                            durationMillis = cardSharedTransitionMotionSpec.durationMillis,
-                            easing = cardSharedTransitionMotionSpec.easing
-                        )
-                    } else {
-                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                    }
-                },
-                clipInOverlayDuringTransition = OverlayClip(coverShape)
-            )
-        }
-    } else {
-        Modifier
-    }
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sourceRoute,
+        transitionEnabled = sharedTransitionReady
+    )
+    val cardShellShape = remember { RoundedCornerShape(12.dp) }
 
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .videoCardShellSharedBoundsOrEmpty(
+                enabled = useCardShellSharedBounds,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
+                bvid = sharedTransitionKey.orEmpty(),
+                sourceRoute = sourceRoute,
+                motionSpec = cardSharedTransitionMotionSpec,
+                clipShape = cardShellShape
+            )
             .padding(horizontal = 16.dp)
             .clickable {
                 coverBounds?.let { bounds ->
@@ -3068,7 +3057,7 @@ private fun SpaceArchiveListItemRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Box(
-            modifier = coverModifier
+            modifier = Modifier
                 .onGloballyPositioned { coordinates ->
                     coverBounds = coordinates.boundsInRoot()
                 }
@@ -3138,24 +3127,6 @@ private fun SpaceArchiveListItemRow(
                 .height(coverHeight),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
-            val titleSharedModifier = if (sharedTransitionReady) {
-                with(requireNotNull(sharedTransitionScope)) {
-                    Modifier
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(
-                                    requireNotNull(sharedTransitionKey)
-                                )
-                            ),
-                            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                            boundsTransform = { _, _ ->
-                                videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                            }
-                        )
-                }
-            } else {
-                Modifier
-            }
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -3163,9 +3134,7 @@ private fun SpaceArchiveListItemRow(
             ) {
                 Text(
                     text = title,
-                    modifier = Modifier
-                        .weight(1f)
-                        .then(titleSharedModifier),
+                    modifier = Modifier.weight(1f),
                     fontSize = 15.sp,
                     lineHeight = 22.sp,
                     fontWeight = FontWeight.Medium,
@@ -3191,44 +3160,8 @@ private fun SpaceArchiveListItemRow(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                val viewsModifier = if (sharedTransitionReady) {
-                    with(requireNotNull(sharedTransitionScope)) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(
-                                    requireNotNull(sharedTransitionKey)
-                                )
-                            ),
-                            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                            boundsTransform = { _, _ ->
-                                videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                            },
-                            clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(4.dp))
-                        )
-                    }
-                } else {
-                    Modifier
-                }
-                val repliesModifier = if (sharedTransitionReady) {
-                    with(requireNotNull(sharedTransitionScope)) {
-                        Modifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(
-                                    requireNotNull(sharedTransitionKey)
-                                )
-                            ),
-                            animatedVisibilityScope = requireNotNull(animatedVisibilityScope),
-                            boundsTransform = { _, _ ->
-                                videoMetadataSharedElementBoundsTransformSpec(cardSharedTransitionMotionSpec)
-                            },
-                            clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(4.dp))
-                        )
-                    }
-                } else {
-                    Modifier
-                }
                 Row(
-                    modifier = viewsModifier,
+                    modifier = Modifier,
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -3245,7 +3178,7 @@ private fun SpaceArchiveListItemRow(
                     )
                 }
                 Row(
-                    modifier = repliesModifier,
+                    modifier = Modifier,
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {

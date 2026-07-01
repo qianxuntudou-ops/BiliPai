@@ -57,8 +57,7 @@ class HomeHeroFlyoutStructureTest {
 
         assertTrue(cardSource.contains("resolveVideoCardSharedTransitionMotionSpec("))
         assertTrue(cardSource.contains("resolveVideoSharedTransitionVisualSpec("))
-        assertTrue(cardSource.contains("durationMillis = homeSharedTransitionMotionSpec.durationMillis"))
-        assertTrue(cardSource.contains("videoCoverSharedElementKey("))
+        assertTrue(cardSource.contains("videoCardShellSharedBoundsOrEmpty("))
         assertTrue(cardSource.contains("sharedElementSourceRoute"))
         assertFalse(cardSource.contains("使用 renderInSharedTransitionScopeOverlayOption 控制可见性"))
     }

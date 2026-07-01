@@ -38,7 +38,8 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSo
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VIDEO_SHARED_COVER_ASPECT_RATIO
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
-import com.android.purebilibili.core.ui.transition.videoCoverSharedElementKey
+import com.android.purebilibili.core.ui.transition.shouldUseVideoCardShellSharedBounds
+import com.android.purebilibili.core.ui.transition.videoCardShellSharedBoundsOrEmpty
 import com.android.purebilibili.feature.video.ui.FollowBadgeTone
 import com.android.purebilibili.feature.video.ui.resolveVideoFollowVisualPolicy
 import com.android.purebilibili.navigation.VideoRoute
@@ -180,32 +181,10 @@ fun RelatedVideoItem(
     }
 
     val cardShape = RoundedCornerShape(12.dp)
-    val cardShellModifier = if (coverSharedEnabled) {
-        with(sharedTransitionScope) {
-            Modifier.sharedBounds(
-                sharedContentState = rememberSharedContentState(
-                    key = videoCoverSharedElementKey(
-                        video.bvid,
-                        sourceRoute = sourceRoute
-                    )
-                ),
-                animatedVisibilityScope = animatedVisibilityScope,
-                boundsTransform = { _, _ ->
-                    if (cardSharedTransitionMotionSpec.enabled) {
-                        tween(
-                            durationMillis = cardSharedTransitionMotionSpec.durationMillis,
-                            easing = cardSharedTransitionMotionSpec.easing
-                        )
-                    } else {
-                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                    }
-                },
-                clipInOverlayDuringTransition = OverlayClip(cardShape)
-            )
-        }
-    } else {
-        Modifier
-    }
+    val useCardShellSharedBounds = shouldUseVideoCardShellSharedBounds(
+        sourceRoute = sourceRoute,
+        transitionEnabled = coverSharedEnabled
+    )
 
     Box(
         modifier = Modifier
@@ -217,7 +196,15 @@ fun RelatedVideoItem(
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier
                 .fillMaxWidth()
-                .then(cardShellModifier)
+                .videoCardShellSharedBoundsOrEmpty(
+                    enabled = useCardShellSharedBounds,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
+                    bvid = video.bvid,
+                    sourceRoute = sourceRoute,
+                    motionSpec = cardSharedTransitionMotionSpec,
+                    clipShape = cardShape
+                )
                 .onGloballyPositioned { coordinates ->
                     cardBoundsRef.value = coordinates.boundsInRoot()
                 }
@@ -279,28 +266,7 @@ fun RelatedVideoItem(
                     .heightIn(min = relatedCoverHeight),
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                // Title
-                // 🔗 [共享元素] 标题 - Wrap in Box to isolate from Text intrinsic measurement issues
-                var titleBoxModifier = Modifier.fillMaxWidth()
-
-                if (metadataSharedEnabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                    with(sharedTransitionScope) {
-                        titleBoxModifier = titleBoxModifier.sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = com.android.purebilibili.core.ui.transition.videoTitleSharedElementKey(
-                                    video.bvid,
-                                    sourceRoute = sourceRoute
-                                )
-                            ),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            boundsTransform = { _, _ ->
-                                com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                            }
-                        )
-                    }
-                }
-
-                Box(modifier = titleBoxModifier) {
+                Box(modifier = Modifier.fillMaxWidth()) {
                     Text(
                         text = video.title,
                         style = MaterialTheme.typography.bodyMedium.copy( // 15sp regular/medium
@@ -315,43 +281,6 @@ fun RelatedVideoItem(
                 Column {
                     // UP owner info row
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // UP Name
-                        var upNameBoxModifier = Modifier.weight(1f, fill = false)
-
-                        if (metadataSharedEnabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                upNameBoxModifier = upNameBoxModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoUpNameSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                                    }
-                                )
-                            }
-                        }
-                        var followActionModifier = Modifier.wrapContentSize()
-                        if (metadataSharedEnabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                followActionModifier = followActionModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoUpActionSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                                    }
-                                )
-                            }
-                        }
-
                         UpBadgeName(
                             name = video.owner.name,
                             badgeTrailingContent = if (isFollowed) {
@@ -364,35 +293,12 @@ fun RelatedVideoItem(
                                             FollowBadgeTone.PRIMARY -> MaterialTheme.colorScheme.primary
                                             null -> MaterialTheme.colorScheme.onSurfaceVariant
                                         },
-                                        modifier = followActionModifier
+                                        modifier = Modifier.wrapContentSize()
                                     )
                                 }
                             } else null,
                             leadingContent = if (video.owner.face.isNotEmpty()) {
                                 {
-                                    var avatarModifier = Modifier
-                                        .size(16.dp)
-                                        .clip(androidx.compose.foundation.shape.CircleShape)
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-
-                                    if (metadataSharedEnabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                                        with(sharedTransitionScope) {
-                                            avatarModifier = avatarModifier.sharedBounds(
-                                                sharedContentState = rememberSharedContentState(
-                                                    key = com.android.purebilibili.core.ui.transition.videoAvatarSharedElementKey(
-                                                        video.bvid,
-                                                        sourceRoute = sourceRoute
-                                                    )
-                                                ),
-                                                animatedVisibilityScope = animatedVisibilityScope,
-                                                boundsTransform = { _, _ ->
-                                                    com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                                                },
-                                                clipInOverlayDuringTransition = OverlayClip(androidx.compose.foundation.shape.CircleShape)
-                                            )
-                                        }
-                                    }
-
                                     AsyncImage(
                                         model = ImageRequest.Builder(LocalContext.current)
                                             .data(FormatUtils.fixImageUrl(video.owner.face))
@@ -400,7 +306,10 @@ fun RelatedVideoItem(
                                             .build(),
                                         contentDescription = null,
                                         contentScale = ContentScale.Crop,
-                                        modifier = avatarModifier
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .clip(androidx.compose.foundation.shape.CircleShape)
+                                            .background(MaterialTheme.colorScheme.surfaceVariant)
                                     )
                                 }
                             } else null,
@@ -409,7 +318,7 @@ fun RelatedVideoItem(
                             badgeTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                             badgeBorderColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                             showUpBadge = showUpBadge,
-                            modifier = upNameBoxModifier
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                     }
                     
@@ -419,49 +328,13 @@ fun RelatedVideoItem(
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Views
-                        var viewsModifier = Modifier.wrapContentSize()
-                        if (metadataSharedEnabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                viewsModifier = viewsModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoViewsSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                                    }
-                                )
-                            }
-                        }
-                        Box(modifier = viewsModifier) {
+                        Box {
                             StatItem(icon = CupertinoIcons.Filled.Play, text = FormatUtils.formatStat(video.stat.view.toLong()))
                         }
                         
                         Spacer(modifier = Modifier.width(12.dp))
                         
-                        // Danmaku
-                        var danmakuModifier = Modifier.wrapContentSize()
-                        if (metadataSharedEnabled && sharedTransitionScope != null && animatedVisibilityScope != null) {
-                            with(sharedTransitionScope) {
-                                danmakuModifier = danmakuModifier.sharedBounds(
-                                    sharedContentState = rememberSharedContentState(
-                                        key = com.android.purebilibili.core.ui.transition.videoDanmakuSharedElementKey(
-                                            video.bvid,
-                                            sourceRoute = sourceRoute
-                                        )
-                                    ),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                    boundsTransform = { _, _ ->
-                                        com.android.purebilibili.core.ui.motion.AppMotionTokens.spatialSpec()
-                                    }
-                                )
-                            }
-                        }
-                        Box(modifier = danmakuModifier) {
+                        Box {
                             StatItem(icon = CupertinoIcons.Filled.BubbleLeft, text = FormatUtils.formatStat(video.stat.danmaku.toLong()))
                         }
                     }

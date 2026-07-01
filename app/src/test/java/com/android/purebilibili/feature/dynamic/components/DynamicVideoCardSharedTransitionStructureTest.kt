@@ -2,20 +2,20 @@ package com.android.purebilibili.feature.dynamic.components
 
 import java.io.File
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class DynamicVideoCardSharedTransitionStructureTest {
 
     @Test
-    fun dynamicVideoCard_usesSeparateCoverAndTitleSharedElements() {
+    fun dynamicVideoCard_usesWholeCardShellSharedBounds() {
         val source = File("src/main/java/com/android/purebilibili/feature/dynamic/components/VideoCards.kt")
             .readText()
 
-        assertTrue(source.contains("videoCoverSharedElementKey(archive.bvid"))
-        assertTrue(source.contains("videoTitleSharedElementKey("))
+        assertTrue(source.contains("videoCardShellSharedBoundsOrEmpty("))
         assertTrue(source.contains("sourceRoute = sourceRoute"))
         assertTrue(source.contains("VideoCardLargeCover("))
-        assertTrue(source.contains("titleModifier = titleModifier"))
+        assertFalse(source.contains("videoTitleSharedElementKey("))
     }
 
     @Test
@@ -25,7 +25,7 @@ class DynamicVideoCardSharedTransitionStructureTest {
 
         assertTrue(source.contains("val coverBoundsRef = remember"))
         assertTrue(source.contains("coverBoundsRef.value?.let { bounds ->"))
-        assertTrue(source.contains("modifier = coverModifier.onGloballyPositioned"))
+        assertTrue(source.contains(".onGloballyPositioned { coordinates ->"))
     }
 
     @Test

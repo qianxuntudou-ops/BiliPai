@@ -31,6 +31,8 @@ import androidx.navigationevent.compose.NavigationEventState
 import androidx.navigationevent.compose.rememberNavigationEventState
 import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
+import com.android.purebilibili.core.ui.transition.VideoSharedTransitionBackdropHost
+import com.android.purebilibili.core.ui.transition.isVideoSharedElementRouteTransition
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationHandler
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationStyle
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackExitDirection
@@ -101,7 +103,14 @@ internal fun BiliPaiNavDisplayHost(
             onBack()
         }
     }
-    val scopedContent: @Composable (BiliPaiNavKey) -> Unit = remember(content, application) {
+    val sharedElementRouteTransition = isVideoSharedElementRouteTransition(popRouteTransition)
+    val scopedContent: @Composable (BiliPaiNavKey) -> Unit = remember(
+        content,
+        application,
+        cardTransitionEnabled,
+        sharedElementRouteTransition,
+        safeBackStack
+    ) {
         { key ->
             ProvideAnimatedVisibilityScope(
                 animatedVisibilityScope = LocalNavAnimatedContentScope.current
@@ -110,7 +119,14 @@ internal fun BiliPaiNavDisplayHost(
                     LocalVideoCardSharedElementSourceRoute provides key.toLegacyRoute()
                 ) {
                     ProvideNavigation3ViewModelApplicationExtras(application) {
-                        content(key)
+                        VideoSharedTransitionBackdropHost(
+                            cardTransitionEnabled = cardTransitionEnabled,
+                            sharedElementRouteTransition = sharedElementRouteTransition,
+                            entryKey = key,
+                            topKey = safeBackStack.lastOrNull()
+                        ) {
+                            content(key)
+                        }
                     }
                 }
             }
