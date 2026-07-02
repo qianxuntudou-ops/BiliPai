@@ -119,4 +119,23 @@ class NativeVideoCardTransitionPolicyTest {
         assertTrue(middle.scrimAlpha > 0f)
         assertTrue(middle.contentScale < 1f)
     }
+
+    @Test
+    fun defaultMidProgressCreatesReferenceLikeBackgroundCompression() {
+        val middle = resolveNativeVideoCardTransitionFrame(
+            spec = NativeVideoCardTransitionSpec(
+                sourceRect = sourceRect,
+                targetRect = targetRect,
+                sourceCornerRadiusPx = 18f,
+                targetCornerRadiusPx = 4f
+            ),
+            progress = 0.5f,
+            phase = NativeVideoCardTransitionPhase.Opening,
+            sdkInt = 35
+        )
+
+        assertTrue(middle.blurRadiusPx >= 44f)
+        assertTrue(middle.scrimAlpha >= 0.3f)
+        assertTrue(middle.contentScale <= 0.94f)
+    }
 }

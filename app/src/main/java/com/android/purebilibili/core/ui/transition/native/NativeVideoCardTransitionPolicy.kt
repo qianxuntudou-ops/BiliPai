@@ -46,9 +46,9 @@ internal data class NativeVideoCardTransitionFrame(
 )
 
 internal const val NATIVE_VIDEO_CARD_TRANSITION_DURATION_MILLIS = 420L
-internal const val NATIVE_VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX = 32f
-private const val NATIVE_VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA = 0.18f
-private const val NATIVE_VIDEO_CARD_TRANSITION_MIN_CONTENT_SCALE = 0.965f
+internal const val NATIVE_VIDEO_CARD_TRANSITION_MAX_BLUR_RADIUS_PX = 48f
+private const val NATIVE_VIDEO_CARD_TRANSITION_MAX_SCRIM_ALPHA = 0.34f
+private const val NATIVE_VIDEO_CARD_TRANSITION_MIN_CONTENT_SCALE = 0.92f
 
 internal fun resolveNativeVideoCardTransitionFrame(
     spec: NativeVideoCardTransitionSpec,

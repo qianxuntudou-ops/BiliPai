@@ -48,10 +48,6 @@ private data class NativeVideoCardTransitionTarget(
     val cornerRadiusPx: Float
 )
 
-private data class PendingOpenTransition(
-    val request: NativeVideoCardTransitionOpenRequest
-)
-
 internal val LocalNativeVideoCardTransitionController =
     staticCompositionLocalOf<NativeVideoCardTransitionController?> { null }
 
@@ -66,7 +62,6 @@ internal class NativeVideoCardTransitionController(
     private val interpolator = PathInterpolator(0.18f, 0.76f, 0.22f, 1f)
     private var animator: ValueAnimator? = null
     private var coverLoadJob: Job? = null
-    private var pendingOpen: PendingOpenTransition? = null
     private var isRunning = false
     private var runningPhase: NativeVideoCardTransitionPhase? = null
 
@@ -80,10 +75,6 @@ internal class NativeVideoCardTransitionController(
             rect = rect,
             cornerRadiusPx = cornerRadiusPx.coerceAtLeast(0f)
         )
-        val pending = pendingOpen
-        if (pending?.request?.videoKey == videoKey) {
-            startPendingOpenIfPossible()
-        }
     }
 
     fun clearTargetBounds(videoKey: String) {
@@ -98,18 +89,44 @@ internal class NativeVideoCardTransitionController(
             navigateAction()
             return
         }
-        if (isRunning || pendingOpen != null) return
+        if (isRunning) return
 
         isRunning = true
         runningPhase = NativeVideoCardTransitionPhase.Opening
-        pendingOpen = PendingOpenTransition(request)
-        showInitialFrame(
-            rect = request.sourceRect,
-            cornerRadiusPx = request.sourceCornerRadiusPx,
-            coverUrl = request.coverUrl
+        cancelAnimatorOnly()
+        loadCoverBitmap(request.coverUrl)
+        val target = NativeVideoCardTransitionTarget(
+            rect = resolveFallbackTargetRect(request.sourceRect),
+            cornerRadiusPx = request.fallbackTargetCornerRadiusPx
         )
-        navigateAction()
-        mainHandler.postDelayed({ startPendingOpenIfPossible(forceFallback = true) }, OPEN_TARGET_WAIT_TIMEOUT_MS)
+        val spec = NativeVideoCardTransitionSpec(
+            sourceRect = request.sourceRect,
+            targetRect = target.rect,
+            sourceCornerRadiusPx = request.sourceCornerRadiusPx,
+            targetCornerRadiusPx = target.cornerRadiusPx
+        )
+        renderFrame(
+            resolveNativeVideoCardTransitionFrame(
+                spec = spec,
+                progress = 0f,
+                phase = NativeVideoCardTransitionPhase.Opening
+            )
+        )
+        animate(
+            spec = spec,
+            phase = NativeVideoCardTransitionPhase.Opening,
+            onEnd = {
+                navigateAction()
+                mainHandler.postDelayed(
+                    {
+                        if (runningPhase == NativeVideoCardTransitionPhase.Opening) {
+                            clearTransitionState()
+                        }
+                    },
+                    OPEN_NAVIGATION_HANDOFF_DELAY_MS
+                )
+            }
+        )
     }
 
     fun startClose(
@@ -159,55 +176,8 @@ internal class NativeVideoCardTransitionController(
     }
 
     fun cancel() {
-        pendingOpen = null
         cancelAnimatorOnly()
         clearTransitionState()
-    }
-
-    private fun showInitialFrame(
-        rect: NativeVideoTransitionRect,
-        cornerRadiusPx: Float,
-        coverUrl: String?
-    ) {
-        loadCoverBitmap(coverUrl)
-        val spec = NativeVideoCardTransitionSpec(
-            sourceRect = rect,
-            targetRect = rect,
-            sourceCornerRadiusPx = cornerRadiusPx,
-            targetCornerRadiusPx = cornerRadiusPx
-        )
-        renderFrame(
-            resolveNativeVideoCardTransitionFrame(
-                spec = spec,
-                progress = 0f,
-                phase = NativeVideoCardTransitionPhase.Opening
-            )
-        )
-    }
-
-    private fun startPendingOpenIfPossible(forceFallback: Boolean = false) {
-        val pending = pendingOpen ?: return
-        val request = pending.request
-        val target = targetBounds[request.videoKey]
-        if (target == null && !forceFallback) return
-
-        pendingOpen = null
-        cancelAnimatorOnly()
-        val resolvedTarget = target ?: NativeVideoCardTransitionTarget(
-            rect = resolveFallbackTargetRect(request.sourceRect),
-            cornerRadiusPx = request.fallbackTargetCornerRadiusPx
-        )
-        val spec = NativeVideoCardTransitionSpec(
-            sourceRect = request.sourceRect,
-            targetRect = resolvedTarget.rect,
-            sourceCornerRadiusPx = request.sourceCornerRadiusPx,
-            targetCornerRadiusPx = resolvedTarget.cornerRadiusPx
-        )
-        animate(
-            spec = spec,
-            phase = NativeVideoCardTransitionPhase.Opening,
-            onEnd = ::clearTransitionState
-        )
     }
 
     private fun animate(
@@ -240,10 +210,15 @@ internal class NativeVideoCardTransitionController(
     private fun ValueAnimator.doOnFinish(action: () -> Unit) {
         addListener(
             object : AnimatorListenerAdapter() {
+                private var canceled = false
                 private var finished = false
 
+                override fun onAnimationCancel(animation: Animator) {
+                    canceled = true
+                }
+
                 override fun onAnimationEnd(animation: Animator) {
-                    if (finished) return
+                    if (finished || canceled) return
                     finished = true
                     action()
                 }
@@ -341,6 +316,6 @@ internal class NativeVideoCardTransitionController(
     }
 
     companion object {
-        private const val OPEN_TARGET_WAIT_TIMEOUT_MS = 160L
+        private const val OPEN_NAVIGATION_HANDOFF_DELAY_MS = 120L
     }
 }
