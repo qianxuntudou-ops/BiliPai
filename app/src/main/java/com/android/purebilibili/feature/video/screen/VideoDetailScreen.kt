@@ -162,7 +162,6 @@ import com.android.purebilibili.core.ui.transition.LocalVideoCardTransitionSessi
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionPhase
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionSession
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionPlaybackIntent
-import com.android.purebilibili.core.ui.transition.resolveVideoCardContainerDetailContentAlpha
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionMotionSpec
 import com.android.purebilibili.core.ui.transition.resolveVideoCardSharedTransitionEasing
 import com.android.purebilibili.core.ui.transition.resolveVideoSharedTransitionPlaybackIntent
@@ -879,11 +878,9 @@ internal fun resolveVideoDetailEntryVisualFrame(
 internal fun resolveVideoDetailLoadingTransitionFrame(
     session: VideoCardTransitionSession
 ): VideoDetailLoadingTransitionFrame {
-    val contentAlpha = resolveVideoCardContainerDetailContentAlpha(session)
-    return if (
-        session.phase == VideoCardTransitionPhase.EXPANDING &&
-        contentAlpha <= 0f
-    ) {
+    val expanding = session.phase == VideoCardTransitionPhase.EXPANDING &&
+        session.progress < 1f - 0.001f
+    return if (expanding) {
         VideoDetailLoadingTransitionFrame(
             showLoadingContent = false,
             containerBackgroundAlpha = 0f,
@@ -893,7 +890,7 @@ internal fun resolveVideoDetailLoadingTransitionFrame(
         VideoDetailLoadingTransitionFrame(
             showLoadingContent = true,
             containerBackgroundAlpha = 1f,
-            loadingContentAlpha = contentAlpha
+            loadingContentAlpha = 1f
         )
     }
 }
@@ -901,7 +898,14 @@ internal fun resolveVideoDetailLoadingTransitionFrame(
 internal fun resolveVideoDetailContainerTransformContentAlpha(
     session: VideoCardTransitionSession
 ): Float {
-    return resolveVideoCardContainerDetailContentAlpha(session)
+    return if (
+        session.phase == VideoCardTransitionPhase.EXPANDING &&
+        session.progress < 0.92f
+    ) {
+        0f
+    } else {
+        1f
+    }
 }
 
 internal fun shouldApplyPipParamsUpdate(

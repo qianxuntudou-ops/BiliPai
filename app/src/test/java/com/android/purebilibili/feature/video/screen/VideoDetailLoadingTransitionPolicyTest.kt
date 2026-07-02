@@ -24,21 +24,6 @@ class VideoDetailLoadingTransitionPolicyTest {
     }
 
     @Test
-    fun expandingSharedCardTransitionRestoresLoadingSkeletonNearFullscreen() {
-        val frame = resolveVideoDetailLoadingTransitionFrame(
-            session = VideoCardTransitionSession(
-                phase = VideoCardTransitionPhase.EXPANDING,
-                progress = 0.94f
-            )
-        )
-
-        assertTrue(frame.showLoadingContent)
-        assertEquals(1f, frame.containerBackgroundAlpha)
-        assertTrue(frame.loadingContentAlpha in 0f..1f)
-        assertTrue(frame.loadingContentAlpha > 0f)
-    }
-
-    @Test
     fun expandedOrNonExpandingSessionsShowLoadingSkeletonNormally() {
         val expanded = resolveVideoDetailLoadingTransitionFrame(
             session = VideoCardTransitionSession(
@@ -64,7 +49,7 @@ class VideoDetailLoadingTransitionPolicyTest {
     }
 
     @Test
-    fun expandingSharedCardTransitionRevealsSuccessContentProgressivelyNearFullscreen() {
+    fun expandingSharedCardTransitionDelaysSuccessContentUntilContainerNearlyFullscreen() {
         val early = resolveVideoDetailContainerTransformContentAlpha(
             session = VideoCardTransitionSession(
                 phase = VideoCardTransitionPhase.EXPANDING,
@@ -85,9 +70,7 @@ class VideoDetailLoadingTransitionPolicyTest {
         )
 
         assertEquals(0f, early)
-        assertTrue(late in 0f..1f)
-        assertTrue(late > 0f)
-        assertTrue(late < 1f)
+        assertEquals(1f, late)
         assertEquals(1f, expanded)
     }
 }
