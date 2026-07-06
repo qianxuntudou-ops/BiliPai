@@ -71,6 +71,33 @@ class VideoDetailReturnCoverPolicyTest {
     }
 
     @Test
+    fun `force cover activates during predictive card return exit`() {
+        // 预测式返回手势拖动期间(存在共享元素配对且本页退出中)提前让封面接管，
+        // 与共享元素 morph 同步，消除提交返回瞬间的 player→cover 硬切。
+        assertTrue(
+            resolveForceCoverOnlyForReturn(
+                forceCoverOnlyOnReturn = false,
+                isReturningFromDetail = false,
+                isExitTransitionInProgress = true,
+                isCardReturnExitInProgress = true
+            )
+        )
+    }
+
+    @Test
+    fun `force cover stays disabled during predictive card return exit when transition disabled`() {
+        assertFalse(
+            resolveForceCoverOnlyForReturn(
+                forceCoverOnlyOnReturn = false,
+                isReturningFromDetail = false,
+                isExitTransitionInProgress = true,
+                transitionEnabled = false,
+                isCardReturnExitInProgress = true
+            )
+        )
+    }
+
+    @Test
     fun `force cover stays disabled when no return state is active`() {
         assertFalse(
             resolveForceCoverOnlyForReturn(

@@ -35,13 +35,64 @@ class VideoCardTransitionBackgroundPolicyTest {
         val frame = resolveVideoCardTransitionBackgroundFrame(
             progress = 1f,
             phase = VideoCardTransitionBackgroundPhase.OPENING,
+            isLightBackground = false,
             sdkInt = 35
         )
 
         assertEquals(36f, frame.blurRadiusPx)
         assertEquals(0f, frame.blurRadiusPx % 2f)
         assertEquals(0.22f, frame.scrimAlpha)
+        assertFalse(frame.useLightScrimTint)
         assertTrue(frame.contentScale < 1f)
+    }
+
+    @Test
+    fun lightOpeningUsesReducedScrimAndWarmTint() {
+        val frame = resolveVideoCardTransitionBackgroundFrame(
+            progress = 1f,
+            phase = VideoCardTransitionBackgroundPhase.OPENING,
+            isLightBackground = true,
+            sdkInt = 35
+        )
+
+        assertEquals(36f, frame.blurRadiusPx)
+        assertEquals(0.10f, frame.scrimAlpha)
+        assertTrue(frame.useLightScrimTint)
+    }
+
+    @Test
+    fun lightReducedMotionUsesMinimalOpeningScrimWithoutBlur() {
+        val frame = resolveVideoCardTransitionBackgroundFrame(
+            progress = 1f,
+            phase = VideoCardTransitionBackgroundPhase.OPENING,
+            motionTier = MotionTier.Reduced,
+            isLightBackground = true,
+            sdkInt = 35
+        )
+
+        assertEquals(0f, frame.blurRadiusPx)
+        assertEquals(0.06f, frame.scrimAlpha)
+        assertTrue(frame.useLightScrimTint)
+    }
+
+    @Test
+    fun lightReturningUsesLighterScrimThanDark() {
+        val light = resolveVideoCardTransitionBackgroundFrame(
+            progress = 1f,
+            phase = VideoCardTransitionBackgroundPhase.RETURNING,
+            isLightBackground = true,
+            sdkInt = 35
+        )
+        val dark = resolveVideoCardTransitionBackgroundFrame(
+            progress = 1f,
+            phase = VideoCardTransitionBackgroundPhase.RETURNING,
+            isLightBackground = false,
+            sdkInt = 35
+        )
+
+        assertTrue(light.scrimAlpha < dark.scrimAlpha)
+        assertEquals(0.05f, light.scrimAlpha)
+        assertEquals(0.10f, dark.scrimAlpha)
     }
 
     @Test
@@ -185,6 +236,41 @@ class VideoCardTransitionBackgroundPolicyTest {
                 sourceRoute = "home?category=RECOMMEND",
                 activeMainHostRoute = "home"
             )
+        )
+    }
+
+    @Test
+    fun gestureProgressMapsBackGestureToDecreasingBlurStartingFromFull() {
+        // 手势起点保持满虚化，与 HELD 衔接；拖到底背景清晰；中途单调递减。
+        assertEquals(1f, resolveVideoCardTransitionBackgroundGestureProgress(0f))
+        assertEquals(0.5f, resolveVideoCardTransitionBackgroundGestureProgress(0.5f))
+        assertEquals(0f, resolveVideoCardTransitionBackgroundGestureProgress(1f))
+    }
+
+    @Test
+    fun gestureProgressClampsOutOfRangeBackProgress() {
+        assertEquals(1f, resolveVideoCardTransitionBackgroundGestureProgress(-0.5f))
+        assertEquals(0f, resolveVideoCardTransitionBackgroundGestureProgress(1.5f))
+    }
+
+    @Test
+    fun returnDurationScalesWithRemainingBlurButKeepsMinimumFloor() {
+        // 未消解(startProgress=1)时用完整时长；手势已消解一半则约减半；接近清晰时不低于取消时长下限。
+        assertEquals(
+            VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS,
+            resolveVideoCardTransitionBackgroundReturnDurationMs(1f)
+        )
+        assertEquals(
+            VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS / 2,
+            resolveVideoCardTransitionBackgroundReturnDurationMs(0.5f)
+        )
+        assertEquals(
+            VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS,
+            resolveVideoCardTransitionBackgroundReturnDurationMs(0f)
+        )
+        assertEquals(
+            VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS,
+            resolveVideoCardTransitionBackgroundReturnDurationMs(0.05f)
         )
     }
 }
