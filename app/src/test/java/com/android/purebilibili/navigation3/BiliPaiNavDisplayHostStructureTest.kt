@@ -90,8 +90,20 @@ class BiliPaiNavDisplayHostStructureTest {
         assertFalse(openingBranch.substringAfter("targetValue = 1f").contains("videoCardTransitionBackgroundProgress.snapTo(0f)"))
         assertFalse(openingBranch.substringAfter("targetValue = 1f").contains("VideoCardTransitionBackgroundPhase.IDLE"))
         assertTrue(returnBranch.contains("VideoCardTransitionBackgroundPhase.RETURNING"))
-        assertTrue(returnBranch.contains("videoCardTransitionBackgroundProgress.snapTo(1f)"))
+        assertFalse(returnBranch.contains("videoCardTransitionBackgroundProgress.snapTo(1f)"))
         assertTrue(returnBranch.contains("targetValue = 0f"))
+    }
+
+    @Test
+    fun navDisplayHostIntegratesPredictiveBackGestureBlurPipeline() {
+        val source = navDisplayHostSource()
+
+        assertTrue(source.contains("predictiveBackBackgroundProgress"))
+        assertTrue(source.contains("resolvePredictiveBackGestureBlurProgress"))
+        assertTrue(source.contains("shouldApplyPredictiveBackGestureBlur"))
+        assertTrue(source.contains("LocalPredictiveBackBackgroundState provides"))
+        assertTrue(source.contains("isLightBackgroundProvider ="))
+        assertTrue(source.contains("isLightBackground: Boolean"))
     }
 
     @Test

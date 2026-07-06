@@ -87,10 +87,13 @@ import com.android.purebilibili.core.ui.ProvideAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.SharedTransitionProvider
 import com.android.purebilibili.core.ui.LocalAnimatedVisibilityScope
 import com.android.purebilibili.core.ui.LocalSharedTransitionScope
+import com.android.purebilibili.core.ui.transition.LocalPredictiveBackBackgroundState
 import com.android.purebilibili.core.ui.transition.LocalVideoCardSharedElementSourceRoute
 import com.android.purebilibili.core.ui.transition.LocalVideoCardTransitionBackgroundState
 import com.android.purebilibili.core.ui.transition.LocalVideoSharedTransitionSpeedSettings
 import com.android.purebilibili.core.ui.transition.VideoSharedTransitionSpeedSettings
+import com.android.purebilibili.core.ui.transition.predictiveBackBackgroundEffect
+import com.android.purebilibili.core.ui.transition.shouldApplyPredictiveBackBlurToRoute
 import com.android.purebilibili.core.ui.transition.shouldApplyVideoCardTransitionBackgroundToRoute
 import com.android.purebilibili.core.ui.transition.videoCardTransitionBackgroundEffect
 import com.android.purebilibili.data.model.response.BgmInfo
@@ -1325,24 +1328,46 @@ fun AppNavigation(
                 ) {
                     val entryRoute = key.toLegacyRoute()
                     val backgroundState = LocalVideoCardTransitionBackgroundState.current
+                    val predictiveBackState = LocalPredictiveBackBackgroundState.current
+                    val predictiveBlurProgress = predictiveBackState.progressProvider()
                     val shouldApplyBackground = cardTransitionEnabled &&
                         shouldApplyVideoCardTransitionBackgroundToRoute(
                             entryRoute = entryRoute,
                             sourceRoute = navigation3SourceMetadata.sourceRoute,
                             activeMainHostRoute = activeBottomTabRoute
                         )
+                    val shouldApplyPredictiveBlur = shouldApplyPredictiveBackBlurToRoute(
+                        entryKey = key,
+                        targetBackKey = predictiveBackState.targetKeyProvider(),
+                        blurProgress = predictiveBlurProgress,
+                    )
                     val routeModifier = Modifier
                         .fillMaxSize()
                         .let { baseModifier ->
-                            if (shouldApplyBackground) {
-                                baseModifier.videoCardTransitionBackgroundEffect(
-                                    progressProvider = backgroundState.progressProvider,
-                                    phaseProvider = backgroundState.phaseProvider,
-                                    motionTierProvider = backgroundState.motionTierProvider
-                                )
-                            } else {
-                                baseModifier
-                            }
+                            baseModifier
+                                .let { modifier ->
+                                    if (shouldApplyBackground) {
+                                        modifier.videoCardTransitionBackgroundEffect(
+                                            progressProvider = backgroundState.progressProvider,
+                                            phaseProvider = backgroundState.phaseProvider,
+                                            motionTierProvider = backgroundState.motionTierProvider,
+                                            isLightBackgroundProvider = backgroundState.isLightBackgroundProvider,
+                                        )
+                                    } else {
+                                        modifier
+                                    }
+                                }
+                                .let { modifier ->
+                                    if (shouldApplyPredictiveBlur) {
+                                        modifier.predictiveBackBackgroundEffect(
+                                            progressProvider = predictiveBackState.progressProvider,
+                                            motionTierProvider = predictiveBackState.motionTierProvider,
+                                            isLightBackgroundProvider = predictiveBackState.isLightBackgroundProvider,
+                                        )
+                                    } else {
+                                        modifier
+                                    }
+                                }
                         }
                     Box(modifier = routeModifier) {
                         content()
@@ -2599,14 +2624,11 @@ fun AppNavigation(
                     modifier = Modifier.fillMaxSize(),
                     sharedTransitionScope = LocalSharedTransitionScope.current,
                     visibleBottomBarRoutes = visibleBottomBarRoutes,
-                    activeMainHostRoute = activeBottomTabRoute
+                    activeMainHostRoute = activeBottomTabRoute,
+                    isLightBackground = isLightBackground,
                 ) { key ->
-                    if (resolveBiliPaiNavEntryContentRole(key) == BiliPaiNavEntryContentRole.MAIN_HOST) {
+                    VideoCardTransitionBackgroundRouteContent(key) {
                         RenderNavigationContent(key)
-                    } else {
-                        VideoCardTransitionBackgroundRouteContent(key) {
-                            RenderNavigationContent(key)
-                        }
                     }
                 }
                 }
