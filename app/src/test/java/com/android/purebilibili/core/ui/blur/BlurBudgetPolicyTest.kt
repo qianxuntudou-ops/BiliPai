@@ -70,8 +70,8 @@ class BlurBudgetPolicyTest {
         )
 
         assertEquals(
-            BlurIntensity.APPLE_DOCK,
-            resolveBudgetedBlurIntensity(BlurIntensity.THICK, budget)
+            BlurIntensity.THIN,
+            resolveBudgetedBlurIntensity(BlurIntensity.APPLE_DOCK, budget)
         )
     }
 

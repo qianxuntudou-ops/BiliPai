@@ -16,12 +16,6 @@ data class BlurBudget(
     val allowRealtime: Boolean
 )
 
-private val blurLevelOrder = listOf(
-    BlurIntensity.THIN,
-    BlurIntensity.APPLE_DOCK,
-    BlurIntensity.THICK
-)
-
 internal fun resolveBlurBudget(
     surfaceType: BlurSurfaceType,
     motionTier: MotionTier,
@@ -85,14 +79,6 @@ internal fun resolveBlurBudget(
     )
 }
 
-internal fun resolveBudgetedBlurIntensity(
-    preferred: BlurIntensity,
-    budget: BlurBudget
-): BlurIntensity {
-    val preferredLevel = blurLevelOrder.indexOf(preferred).coerceAtLeast(0)
-    val cappedLevel = minOf(preferredLevel, budget.maxBlurLevel)
-    return blurLevelOrder[cappedLevel]
-}
 
 internal fun resolveBlurInputScale(
     budget: BlurBudget,
