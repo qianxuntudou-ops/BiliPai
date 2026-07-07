@@ -1226,6 +1226,7 @@ fun HomeScreen(
                 val settledGridState = gridStates[settledCategory] ?: return@collect
                 val settledHeaderOffsetPx = if (isAnyHeaderCollapseEnabled) {
                     resolveHomeHeaderOffsetForSettledPage(
+                        currentHeaderOffsetPx = headerOffsetHeightPx,
                         firstVisibleItemIndex = settledGridState.firstVisibleItemIndex,
                         firstVisibleItemScrollOffset = settledGridState.firstVisibleItemScrollOffset,
                         maxHeaderCollapsePx = headerAutoCollapseDistancePx
@@ -2358,18 +2359,20 @@ internal fun resolveHomeOverlayMotionSpec(): HomeOverlayMotionSpec {
     )
 }
 
+private const val RETURN_ANIMATION_SUPPRESSION_BUFFER_MS = 40L
+private const val RETURN_ANIMATION_SUPPRESSION_TABLET_EXTRA_MS = 40L
+
 internal fun resolveReturnAnimationSuppressionDurationMs(
     isTabletLayout: Boolean,
     cardAnimationEnabled: Boolean,
     cardTransitionEnabled: Boolean,
     isQuickReturnFromDetail: Boolean
 ): Long {
-    if (cardTransitionEnabled && isQuickReturnFromDetail) {
-        return if (isTabletLayout) 540L else 420L
-    }
     if (cardTransitionEnabled) {
-        if (!cardAnimationEnabled) return if (isTabletLayout) 460L else 400L
-        return if (isTabletLayout) 460L else 400L
+        return com.android.purebilibili.core.ui.transition.VIDEO_SHARED_TRANSITION_STANDARD_DURATION_MILLIS
+            .toLong() +
+            RETURN_ANIMATION_SUPPRESSION_BUFFER_MS +
+            if (isTabletLayout) RETURN_ANIMATION_SUPPRESSION_TABLET_EXTRA_MS else 0L
     }
     if (!cardAnimationEnabled) return 220L
     return if (isTabletLayout) 220L else 240L
