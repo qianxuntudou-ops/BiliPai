@@ -106,6 +106,26 @@ class PredictiveBackBackgroundPolicyTest {
     }
 
     @Test
+    fun shouldApplyPredictiveBlur_forSiblingPopTransitionsWhenEnabled() {
+        assertTrue(
+            shouldApplyPredictiveBackGestureBlur(
+                routeTransition = BiliPaiNavRouteTransition.BOTTOM_BAR_SIBLING_POP,
+                predictiveBackEnabled = true,
+                gestureReturningVideoCard = false,
+                motionTier = MotionTier.Normal,
+            )
+        )
+        assertTrue(
+            shouldApplyPredictiveBackGestureBlur(
+                routeTransition = BiliPaiNavRouteTransition.LIGHT_SIBLING_POP,
+                predictiveBackEnabled = true,
+                gestureReturningVideoCard = false,
+                motionTier = MotionTier.Normal,
+            )
+        )
+    }
+
+    @Test
     fun routeMatcherAppliesBlurOnlyToTargetBackKey() {
         assertTrue(
             shouldApplyPredictiveBackBlurToRoute(

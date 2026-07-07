@@ -50,13 +50,11 @@ import com.android.purebilibili.core.ui.transition.PREDICTIVE_BACK_BACKGROUND_CA
 import com.android.purebilibili.core.ui.transition.PredictiveBackBackgroundState
 import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_CANCEL_DURATION_MS
 import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_FORWARD_DURATION_MS
-import com.android.purebilibili.core.ui.transition.VIDEO_CARD_TRANSITION_BACKGROUND_RETURN_DURATION_MS
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundPhase
 import com.android.purebilibili.core.ui.transition.VideoCardTransitionBackgroundState
 import com.android.purebilibili.core.ui.transition.resolvePredictiveBackCommitBlurDurationMs
 import com.android.purebilibili.core.ui.transition.resolvePredictiveBackGestureBlurProgress
 import com.android.purebilibili.core.ui.transition.resolveVideoCardTransitionBackgroundGestureProgress
-import com.android.purebilibili.core.ui.transition.resolveVideoCardTransitionBackgroundReturnDurationMs
 import com.android.purebilibili.core.ui.transition.shouldApplyPredictiveBackGestureBlur
 import com.android.purebilibili.navigation.isVideoCardReturnTargetRoute
 import com.android.purebilibili.navigation3.predictiveback.BiliPaiPredictiveBackAnimationHandler
@@ -139,17 +137,9 @@ internal fun BiliPaiNavDisplayHost(
             }
 
             returnedFromVideoDetail -> {
-                // 预测式返回手势期间背景虚化已随手势实时消退(见下方 gesture LaunchedEffect)，
-                // 此处从当前值续接到 0，而非 snapTo(1f) 再补满一段，避免封面落位后再被高斯模糊一闪。
-                val startProgress = videoCardTransitionBackgroundProgress.value
-                videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.RETURNING
-                videoCardTransitionBackgroundProgress.animateTo(
-                    targetValue = 0f,
-                    animationSpec = tween(
-                        durationMillis = resolveVideoCardTransitionBackgroundReturnDurationMs(startProgress),
-                        easing = LinearOutSlowInEasing
-                    )
-                )
+                // pop 后首页层已含共享元素回收中的卡片；任何 route 级 blur/scrim 都会让落位封面发糊/闪烁。
+                // 手势阶段已在详情页覆盖下消解虚化(见 performBack 最终进度捕获 + gesture LaunchedEffect)。
+                videoCardTransitionBackgroundProgress.snapTo(0f)
                 videoCardTransitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE
             }
 
@@ -203,6 +193,20 @@ internal fun BiliPaiNavDisplayHost(
     }
     val performBack: (() -> Unit) -> Unit = { commitTransitionCallBack ->
         navigationScope.launch {
+            val finalVideoCardGestureBackProgress =
+                (navigationEventState?.transitionState as? NavigationEventTransitionState.InProgress)
+                    ?.latestEvent
+                    ?.progress
+            val shouldCaptureVideoCardGestureBlur = cardTransitionEnabled &&
+                videoCardTransitionBackgroundPhase == VideoCardTransitionBackgroundPhase.HELD &&
+                safeBackStack.lastOrNull() is BiliPaiNavKey.VideoDetail &&
+                isVideoCardReturnTargetRoute(sourceMetadata.sourceRoute) &&
+                finalVideoCardGestureBackProgress != null
+            if (shouldCaptureVideoCardGestureBlur) {
+                videoCardTransitionBackgroundProgress.snapTo(
+                    resolveVideoCardTransitionBackgroundGestureProgress(finalVideoCardGestureBackProgress)
+                )
+            }
             val shouldFadePredictiveBlur = shouldApplyPredictiveBackGestureBlur(
                 routeTransition = popRouteTransition,
                 predictiveBackEnabled = predictiveBackEnabled,

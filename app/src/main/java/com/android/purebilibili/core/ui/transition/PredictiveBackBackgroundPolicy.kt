@@ -102,7 +102,9 @@ internal fun shouldApplyPredictiveBackGestureBlur(
     if (gestureReturningVideoCard) return false
     if (motionTier == MotionTier.Reduced) return false
     if (routeTransition == BiliPaiNavRouteTransition.NO_OP_SHARED_ELEMENT) return false
-    return routeTransition == BiliPaiNavRouteTransition.CLASSIC_CARD
+    return routeTransition == BiliPaiNavRouteTransition.CLASSIC_CARD ||
+        routeTransition == BiliPaiNavRouteTransition.BOTTOM_BAR_SIBLING_POP ||
+        routeTransition == BiliPaiNavRouteTransition.LIGHT_SIBLING_POP
 }
 
 internal fun shouldApplyPredictiveBackBlurToRoute(

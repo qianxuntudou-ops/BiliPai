@@ -98,6 +98,8 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
     // 仅保留 scrim + 轻微缩放作为回退，避免全屏 RenderEffect 的开销。
     val rawBlurRadiusPx = if (
         phase != VideoCardTransitionBackgroundPhase.IDLE &&
+        // RETURNING 时首页层已含回收中的共享元素卡片，全屏 blur 会让落位封面发糊。
+        phase != VideoCardTransitionBackgroundPhase.RETURNING &&
         motionTier != MotionTier.Reduced &&
         sdkInt >= Build.VERSION_CODES.S
     ) {
@@ -115,11 +117,7 @@ internal fun resolveVideoCardTransitionBackgroundFrame(
                     isLightBackground = isLightBackground,
                     motionTier = motionTier,
                 )
-            VideoCardTransitionBackgroundPhase.RETURNING ->
-                resolveVideoCardTransitionReturningScrimAlpha(
-                    blurStrength = blurStrength,
-                    isLightBackground = isLightBackground,
-                )
+            VideoCardTransitionBackgroundPhase.RETURNING -> 0f
             VideoCardTransitionBackgroundPhase.IDLE,
             VideoCardTransitionBackgroundPhase.HELD -> 0f
         },

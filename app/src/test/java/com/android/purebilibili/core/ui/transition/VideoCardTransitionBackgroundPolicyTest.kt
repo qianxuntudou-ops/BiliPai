@@ -27,7 +27,7 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertTrue(opening.scrimAlpha > 0f)
         assertTrue(opening.contentScale < 1f)
         assertEquals(0f, returning.blurRadiusPx)
-        assertTrue(returning.scrimAlpha > 0f)
+        assertEquals(0f, returning.scrimAlpha)
     }
 
     @Test
@@ -76,27 +76,23 @@ class VideoCardTransitionBackgroundPolicyTest {
     }
 
     @Test
-    fun lightReturningUsesLighterScrimThanDark() {
-        val light = resolveVideoCardTransitionBackgroundFrame(
-            progress = 1f,
-            phase = VideoCardTransitionBackgroundPhase.RETURNING,
+    fun lightReturningScrimPolicyStillPrefersLighterTintForBackgroundHelpers() {
+        val light = resolveVideoCardTransitionReturningScrimAlpha(
+            blurStrength = 1f,
             isLightBackground = true,
-            sdkInt = 35
         )
-        val dark = resolveVideoCardTransitionBackgroundFrame(
-            progress = 1f,
-            phase = VideoCardTransitionBackgroundPhase.RETURNING,
+        val dark = resolveVideoCardTransitionReturningScrimAlpha(
+            blurStrength = 1f,
             isLightBackground = false,
-            sdkInt = 35
         )
 
-        assertTrue(light.scrimAlpha < dark.scrimAlpha)
-        assertEquals(0.05f, light.scrimAlpha)
-        assertEquals(0.10f, dark.scrimAlpha)
+        assertTrue(light < dark)
+        assertEquals(0.05f, light)
+        assertEquals(0.10f, dark)
     }
 
     @Test
-    fun returningFrameFadesBlurWithoutScrimOrScale() {
+    fun returningFrameClearsBlurAndScrimWithoutAffectingCardLayer() {
         val start = resolveVideoCardTransitionBackgroundFrame(
             progress = 1f,
             phase = VideoCardTransitionBackgroundPhase.RETURNING,
@@ -113,15 +109,15 @@ class VideoCardTransitionBackgroundPolicyTest {
             sdkInt = 35
         )
 
-        assertTrue(start.blurRadiusPx > middle.blurRadiusPx)
-        assertTrue(middle.blurRadiusPx > end.blurRadiusPx)
-        assertEquals(28f, middle.blurRadiusPx)
-        assertTrue(start.scrimAlpha > middle.scrimAlpha)
-        assertTrue(middle.scrimAlpha > end.scrimAlpha)
+        assertEquals(0f, start.blurRadiusPx)
+        assertEquals(0f, middle.blurRadiusPx)
+        assertEquals(0f, end.blurRadiusPx)
+        assertEquals(0f, start.scrimAlpha)
+        assertEquals(0f, middle.scrimAlpha)
+        assertEquals(0f, end.scrimAlpha)
         assertEquals(1f, start.contentScale)
         assertEquals(1f, middle.contentScale)
-        assertEquals(0f, end.blurRadiusPx)
-        assertEquals(0f, end.scrimAlpha)
+        assertEquals(1f, end.contentScale)
     }
 
     @Test
@@ -166,19 +162,19 @@ class VideoCardTransitionBackgroundPolicyTest {
         assertEquals(0f, opening.blurRadiusPx)
         assertTrue(opening.scrimAlpha > 0f)
         assertEquals(0f, returning.blurRadiusPx)
-        assertTrue(returning.scrimAlpha > 0f)
+        assertEquals(0f, returning.scrimAlpha)
     }
 
     @Test
-    fun lowProgressKeepsBlurVisibleUntilTransitionEnds() {
+    fun lowProgressReturningFrameKeepsCardLayerClear() {
         val frame = resolveVideoCardTransitionBackgroundFrame(
             progress = 0.25f,
             phase = VideoCardTransitionBackgroundPhase.RETURNING,
             sdkInt = 35
         )
 
-        assertEquals(16f, frame.blurRadiusPx)
-        assertTrue(frame.scrimAlpha > 0f)
+        assertEquals(0f, frame.blurRadiusPx)
+        assertEquals(0f, frame.scrimAlpha)
         assertEquals(1f, frame.contentScale)
     }
 
