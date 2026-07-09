@@ -188,7 +188,9 @@ class HomeChromeLiquidSurfaceStructureTest {
                 topBarSource.contains("resolveTopTabIndicatorBackdropPolicy(") &&
                 topBarSource.contains("allowIdleGlassEffect = false") &&
                 topBarSource.contains("contentBackdrop = topTabContentBackdrop") &&
-                topBarSource.contains("Capsule above labels so theme glyphs show through glass") &&
+                topBarSource.contains("topTabListScrollOffsetPx") &&
+                topBarSource.contains("One shared shift for export") &&
+                topBarSource.contains("indicatorPanelOffsetPx = 0f") &&
                 topBarSource.contains("!shouldUseMd3DockBackedCapsule && !shouldUseMd3LiquidCapsule")
         )
         assertFalse(

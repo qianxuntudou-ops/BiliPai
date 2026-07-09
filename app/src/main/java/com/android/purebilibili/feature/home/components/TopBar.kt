@@ -1110,7 +1110,6 @@ private fun LightweightHomeTopTabs(
         val topTabExportMonochromeColor = resolveSharedLiquidExportMonochromeColor(
             darkTheme = isDarkTheme
         )
-        val topTabExportPanelOffsetPx = topTabPanelOffsetPx
         val measuredSelectedItemLeftPx by remember(shouldUseMovingIosCapsule) {
             derivedStateOf {
                 if (!shouldUseMovingIosCapsule ||
@@ -1183,31 +1182,33 @@ private fun LightweightHomeTopTabs(
                         tabViewportLeftInWindowPx = coordinates.boundsInWindow().left
                     }
             ) {
-                val topTabContentPadding = PaddingValues(
-                    horizontal = if (effectiveRenderer == HomeTopTabRenderer.IOS) {
-                        IOS_TOP_TAB_CONTENT_PADDING_DP.dp
-                    } else {
-                        md3ContentPadding
-                    }
-                )
-                // Hidden monochrome export row: theme tint → pure primary under glass (bottom-bar path).
-                // Own LazyListState synced to the visible row (two LazyRows cannot share one state).
-                val exportListState = rememberLazyListState()
-                LaunchedEffect(
-                    listState.firstVisibleItemIndex,
-                    listState.firstVisibleItemScrollOffset,
-                    shouldPrimeTopTabLiquidGlassCapture
-                ) {
-                    if (!shouldPrimeTopTabLiquidGlassCapture) return@LaunchedEffect
-                    exportListState.scrollToItem(
-                        index = listState.firstVisibleItemIndex,
-                        scrollOffset = listState.firstVisibleItemScrollOffset
-                    )
+                val topTabHorizontalPadding = if (effectiveRenderer == HomeTopTabRenderer.IOS) {
+                    IOS_TOP_TAB_CONTENT_PADDING_DP.dp
+                } else {
+                    md3ContentPadding
                 }
+                val topTabContentPadding = PaddingValues(horizontal = topTabHorizontalPadding)
+                // Frame-synced export scroll (no second LazyList / LaunchedEffect lag → no ghost).
+                val topTabListScrollOffsetPx by remember(density, itemWidth, listState) {
+                    derivedStateOf {
+                        with(density) {
+                            listState.firstVisibleItemIndex * itemWidth.toPx() +
+                                listState.firstVisibleItemScrollOffset.toFloat()
+                        }
+                    }
+                }
+                val topTabContentPanelOffsetPx =
+                    if (shouldUseLiquidGlassIndicator) topTabPanelOffsetPx else 0f
+                val topTabHorizontalPaddingPx = with(density) { topTabHorizontalPadding.toPx() }
+                // One shared shift for export + visible + capsule avoids double panel offset ghosts.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer { translationX = topTabContentPanelOffsetPx }
+                ) {
+                // Hidden monochrome export row: theme tint → pure primary under glass.
                 if (shouldPrimeTopTabLiquidGlassCapture) {
-                    LazyRow(
-                        state = exportListState,
-                        userScrollEnabled = false,
+                    Box(
                         modifier = Modifier
                             .fillMaxSize()
                             .clearAndSetSemantics {}
@@ -1215,41 +1216,40 @@ private fun LightweightHomeTopTabs(
                             .zIndex(0f)
                             .layerBackdrop(topTabContentBackdrop)
                             .graphicsLayer {
-                                translationX = topTabExportPanelOffsetPx
+                                // Only mirror LazyRow content origin (padding - scroll). No extra panel offset.
+                                translationX = topTabHorizontalPaddingPx - topTabListScrollOffsetPx
                             },
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Start,
-                        contentPadding = topTabContentPadding
+                        contentAlignment = Alignment.CenterStart
                     ) {
-                        itemsIndexed(
-                            items = categories,
-                            key = { index, category ->
-                                "export_${categoryKeys.getOrNull(index) ?: category}"
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            categories.forEachIndexed { index, category ->
+                                val categoryKey = categoryKeys.getOrNull(index) ?: category
+                                LightweightTopTabItem(
+                                    renderer = effectiveRenderer,
+                                    category = category,
+                                    categoryKey = categoryKey,
+                                    index = index,
+                                    selectionFraction = 1f,
+                                    selectedIndex = selectedIndex,
+                                    showIcon = showIcon,
+                                    showText = showText,
+                                    itemWidth = itemWidth,
+                                    skinPlainStyle = false,
+                                    drawContainer = false,
+                                    skinIconPaths = null,
+                                    hasSkinStickerIcon = false,
+                                    useClickIndication = false,
+                                    colorMode = TopTabLiquidColorMode.GLASS_EXPORT,
+                                    exportMonochromeColor = topTabExportMonochromeColor,
+                                    modifier = Modifier.graphicsLayer(
+                                        colorFilter = ColorFilter.tint(topTabExportTintColor)
+                                    ),
+                                    onClick = {}
+                                )
                             }
-                        ) { index, category ->
-                            val categoryKey = categoryKeys.getOrNull(index) ?: category
-                            LightweightTopTabItem(
-                                renderer = effectiveRenderer,
-                                category = category,
-                                categoryKey = categoryKey,
-                                index = index,
-                                selectionFraction = 1f,
-                                selectedIndex = selectedIndex,
-                                showIcon = showIcon,
-                                showText = showText,
-                                itemWidth = itemWidth,
-                                skinPlainStyle = false,
-                                drawContainer = false,
-                                skinIconPaths = null,
-                                hasSkinStickerIcon = false,
-                                useClickIndication = false,
-                                colorMode = TopTabLiquidColorMode.GLASS_EXPORT,
-                                exportMonochromeColor = topTabExportMonochromeColor,
-                                modifier = Modifier.graphicsLayer(
-                                    colorFilter = ColorFilter.tint(topTabExportTintColor)
-                                ),
-                                onClick = {}
-                            )
                         }
                     }
                 }
@@ -1331,7 +1331,7 @@ private fun LightweightHomeTopTabs(
                         )
                     }
                 }
-                // Capsule above labels so theme glyphs show through glass (bottom-bar z-order).
+                // Capsule above labels; panel offset is on parent so do NOT add again here.
                 Box(modifier = Modifier.fillMaxSize().zIndex(1f)) {
                     if (shouldUseMovingIosCapsule) {
                         val capsuleShape = resolveSharedBottomBarCapsuleShape()
@@ -1348,11 +1348,7 @@ private fun LightweightHomeTopTabs(
                                     dockIndicatorHorizontalGap.toPx()
                                 }
                             ),
-                            indicatorPanelOffsetPx = if (shouldUseLiquidGlassIndicator) {
-                                topTabPanelOffsetPx
-                            } else {
-                                0f
-                            },
+                            indicatorPanelOffsetPx = 0f,
                             indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
                             indicatorWidth = indicatorWidth,
                             indicatorHeight = dockIndicatorHeight,
@@ -1383,7 +1379,7 @@ private fun LightweightHomeTopTabs(
                             visible = true,
                             dockContentAlpha = 1f,
                             indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
-                            indicatorPanelOffsetPx = topTabPanelOffsetPx,
+                            indicatorPanelOffsetPx = 0f,
                             indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
                             indicatorWidth = md3LiquidCapsuleWidth,
                             indicatorHeight = dockIndicatorHeight,
@@ -1413,7 +1409,7 @@ private fun LightweightHomeTopTabs(
                             visible = true,
                             dockContentAlpha = 1f,
                             indicatorTranslationXPx = md3LiquidCapsuleTranslationXPx,
-                            indicatorPanelOffsetPx = topTabPanelOffsetPx,
+                            indicatorPanelOffsetPx = 0f,
                             indicatorSettleReboundTransform = BottomBarClickPulseTransform(scaleX = 1f),
                             indicatorWidth = md3LiquidCapsuleWidth,
                             indicatorHeight = dockIndicatorHeight,
@@ -1440,6 +1436,7 @@ private fun LightweightHomeTopTabs(
                         )
                     }
                 }
+                } // shared panel-offset group (export + visible + capsule)
 
                 if (effectiveRenderer == HomeTopTabRenderer.MD3 && !hasSkinStickerIcons) {
                     val indicatorColor = if (skinPlainStyle && skinPlainContentColor != null) {
