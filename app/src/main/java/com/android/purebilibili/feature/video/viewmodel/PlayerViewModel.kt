@@ -4084,6 +4084,7 @@ class PlayerViewModel : ViewModel() {
                 else false
             }
             val favoriteDeferred = async { com.android.purebilibili.data.repository.ActionRepository.checkFavoriteStatus(aid) }
+            val watchLaterDeferred = async { com.android.purebilibili.data.repository.ActionRepository.checkWatchLaterStatus(aid) }
             val likeDeferred = async { com.android.purebilibili.data.repository.ActionRepository.checkLikeStatus(aid) }
             val coinDeferred = async { com.android.purebilibili.data.repository.ActionRepository.checkCoinStatus(aid) }
             val vipDeferred = async {
@@ -4099,6 +4100,7 @@ class PlayerViewModel : ViewModel() {
 
             val fetchedFollow = followDeferred.await()
             val fetchedFavorite = favoriteDeferred.await()
+            val fetchedWatchLater = watchLaterDeferred.await()
             val fetchedLike = likeDeferred.await()
             val fetchedCoinCount = coinDeferred.await()
             val fetchedVip = vipDeferred.await()
@@ -4122,6 +4124,7 @@ class PlayerViewModel : ViewModel() {
                         isVip = success.isVip || fetchedVip,
                         isFollowing = resolvedFollow,
                         isFavorited = success.isFavorited || fetchedFavorite,
+                        isInWatchLater = success.isInWatchLater || fetchedWatchLater,
                         isLiked = success.isLiked || fetchedLike,
                         coinCount = maxOf(success.coinCount, fetchedCoinCount),
                         followingMids = mergedFollowingMids
