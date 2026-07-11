@@ -9,6 +9,21 @@ import kotlin.test.assertTrue
 class MusicPlayerVisualPolicyTest {
 
     @Test
+    fun `pager indicator follows drag and stays inside two segments`() {
+        assertEquals(0f, resolveMusicPagerIndicatorPosition(0, -0.4f))
+        assertEquals(0.35f, resolveMusicPagerIndicatorPosition(0, 0.35f))
+        assertEquals(1f, resolveMusicPagerIndicatorPosition(1, 0.4f))
+    }
+
+    @Test
+    fun `glass fallback remains legible without refraction`() {
+        val fallback = resolveMusicGlassFallbackStyle()
+
+        assertTrue(fallback.backgroundAlphaPercent >= 46)
+        assertTrue(fallback.borderAlphaPercent >= 22)
+    }
+
+    @Test
     fun `liquid controls require supported foreground renderer`() {
         assertFalse(resolveMusicLiquidGlassEnabled(32, true, false, false))
         assertTrue(resolveMusicLiquidGlassEnabled(33, true, false, false))

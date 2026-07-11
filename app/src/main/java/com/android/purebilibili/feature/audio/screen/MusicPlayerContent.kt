@@ -52,6 +52,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,6 +84,7 @@ import com.android.purebilibili.core.lifecycle.BackgroundManager
 import com.android.purebilibili.core.ui.effect.liquidGlassBackground
 import com.android.purebilibili.feature.audio.lyrics.LyricLine
 import com.android.purebilibili.feature.audio.player.MusicPlayerUiState
+import com.android.purebilibili.feature.home.components.BottomBarLiquidSegmentedControl
 import com.android.purebilibili.feature.video.player.PlayMode
 import io.github.alexzhirkevich.cupertino.icons.CupertinoIcons
 import io.github.alexzhirkevich.cupertino.icons.filled.BackwardEnd
@@ -93,6 +95,7 @@ import io.github.alexzhirkevich.cupertino.icons.outlined.ChevronDown
 import io.github.alexzhirkevich.cupertino.icons.outlined.Ellipsis
 import io.github.alexzhirkevich.cupertino.icons.outlined.MusicNote
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
@@ -182,45 +185,71 @@ internal fun MusicPlayerContent(
 
             MusicPlayerLayout.COMPACT_PAGER -> {
                 val pagerState = rememberPagerState(pageCount = { 2 })
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.fillMaxSize()
-                ) { page ->
-                    if (page == 0) {
-                        PlayerPage(
-                            state = state,
-                            artworkBitmap = artworkBitmap,
-                            artworkSizeDp = resolveMusicArtworkSizeDp(
-                                availableWidthDp,
-                                availableHeightDp,
-                                layout
-                            ),
-                            glassEnabled = glassEnabled,
-                            onPlayPause = onPlayPause,
-                            onSeek = onSeek,
-                            onPrevious = onPrevious,
-                            onNext = onNext,
-                            onShowQueue = { showQueue = true },
-                            onPlayModeChange = onPlayModeChange,
-                            onVideoModeClick = onVideoModeClick,
-                            onCollectionClick = onCollectionClick,
-                            onSleepTimerClick = onSleepTimerClick,
-                            sleepTimerLabel = sleepTimerLabel,
-                            onPipClick = onPipClick
-                        )
-                    } else {
-                        LyricsPage(
-                            state = state,
-                            glassEnabled = glassEnabled,
-                            onPlayPause = onPlayPause,
-                            onSeek = onSeek,
-                            onLyricsOffsetChange = onLyricsOffsetChange,
-                            onLyricsRetry = onLyricsRetry,
-                            onOpenLyricsSearch = { showLyricsSearch = true },
-                            blurEffectsEnabled = lyricsBlurEffectsEnabled,
-                            reduceMotion = effectiveReduceMotion
-                        )
+                val pagerScope = rememberCoroutineScope()
+                Box(modifier = Modifier.fillMaxSize()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        if (page == 0) {
+                            PlayerPage(
+                                state = state,
+                                artworkBitmap = artworkBitmap,
+                                artworkSizeDp = resolveMusicArtworkSizeDp(
+                                    availableWidthDp,
+                                    availableHeightDp,
+                                    layout
+                                ),
+                                glassEnabled = glassEnabled,
+                                onPlayPause = onPlayPause,
+                                onSeek = onSeek,
+                                onPrevious = onPrevious,
+                                onNext = onNext,
+                                onShowQueue = { showQueue = true },
+                                onPlayModeChange = onPlayModeChange,
+                                onVideoModeClick = onVideoModeClick,
+                                onCollectionClick = onCollectionClick,
+                                onSleepTimerClick = onSleepTimerClick,
+                                sleepTimerLabel = sleepTimerLabel,
+                                onPipClick = onPipClick,
+                                modifier = Modifier.padding(bottom = 70.dp)
+                            )
+                        } else {
+                            LyricsPage(
+                                state = state,
+                                glassEnabled = glassEnabled,
+                                onPlayPause = onPlayPause,
+                                onSeek = onSeek,
+                                onLyricsOffsetChange = onLyricsOffsetChange,
+                                onLyricsRetry = onLyricsRetry,
+                                onOpenLyricsSearch = { showLyricsSearch = true },
+                                blurEffectsEnabled = lyricsBlurEffectsEnabled,
+                                reduceMotion = effectiveReduceMotion,
+                                modifier = Modifier.padding(bottom = 70.dp)
+                            )
+                        }
                     }
+                    BottomBarLiquidSegmentedControl(
+                        items = listOf("播放", "歌词"),
+                        selectedIndex = pagerState.currentPage,
+                        onSelected = { page ->
+                            pagerScope.launch { pagerState.animateScrollToPage(page) }
+                        },
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .navigationBarsPadding()
+                            .padding(horizontal = 72.dp, vertical = 8.dp),
+                        height = 52.dp,
+                        indicatorHeight = 46.dp,
+                        forceLiquidChrome = true,
+                        preferInlineContentStyle = false,
+                        indicatorPositionProvider = {
+                            resolveMusicPagerIndicatorPosition(
+                                currentPage = pagerState.currentPage,
+                                currentPageOffsetFraction = pagerState.currentPageOffsetFraction
+                            )
+                        }
+                    )
                 }
             }
 
@@ -894,9 +923,16 @@ private fun Modifier.musicGlassSurface(
             )
             .border(1.dp, Color.White.copy(alpha = 0.22f), shape)
     } else {
+        val fallbackStyle = resolveMusicGlassFallbackStyle()
         base
-            .background(Color.Black.copy(alpha = 0.34f))
-            .border(1.dp, Color.White.copy(alpha = 0.16f), shape)
+            .background(
+                Color.Black.copy(alpha = fallbackStyle.backgroundAlphaPercent / 100f)
+            )
+            .border(
+                1.dp,
+                Color.White.copy(alpha = fallbackStyle.borderAlphaPercent / 100f),
+                shape
+            )
     }
 }
 
