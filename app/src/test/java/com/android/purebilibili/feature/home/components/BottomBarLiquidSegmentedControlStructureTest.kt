@@ -2,12 +2,31 @@ package com.android.purebilibili.feature.home.components
 
 import java.io.File
 import com.android.purebilibili.core.theme.UiPreset
+import androidx.compose.ui.graphics.Color
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class BottomBarLiquidSegmentedControlStructureTest {
+
+    @Test
+    fun `segmented labels reuse bottom bar glass content colors while moving`() {
+        val unselected = Color(0xFF666666)
+        val selected = Color(0xFFFF6699)
+
+        val colors = resolveLiquidGlassSelectionContentColors(
+            unselectedColor = unselected,
+            selectedColor = selected,
+            themeWeight = 1f,
+            glassEnabled = true,
+            indicatorProgress = 0.8f,
+            indicatorBackdropEnabled = true
+        )
+
+        assertEquals(unselected, colors.visibleColor)
+        assertEquals(unselected, colors.exportColor)
+    }
 
     @Test
     fun `segmented indicator keeps slot width so content remains centered`() {

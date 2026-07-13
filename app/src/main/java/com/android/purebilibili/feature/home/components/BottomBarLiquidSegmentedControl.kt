@@ -32,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.GraphicsLayerScope
@@ -604,6 +605,9 @@ fun BottomBarLiquidSegmentedControl(
                 preset = homeSettings.bottomBarLiquidGlassPreset,
                 darkTheme = isDarkTheme
             )
+        val foregroundAboveIndicator = shouldRenderBottomBarForegroundAboveIndicator(
+            homeSettings.bottomBarLiquidGlassPreset
+        )
 
         Box(
             modifier = Modifier
@@ -643,6 +647,7 @@ fun BottomBarLiquidSegmentedControl(
             modifier = Modifier
                 .matchParentSize()
                 .padding(horizontal = contentPadding, vertical = contentVerticalInset)
+                .zIndex(if (foregroundAboveIndicator) 1f else 0f)
                 .graphicsLayer { translationX = panelOffsetPx }
         )
 
@@ -886,17 +891,18 @@ private fun BottomBarLiquidSegmentedLabels(
                 motionProgress = motionProgress,
                 selectionEmphasis = selectionEmphasis
             )
+            val contentColors = resolveLiquidGlassSelectionContentColors(
+                unselectedColor = unselectedTextColor,
+                selectedColor = selectedTextColor,
+                themeWeight = visual.themeWeight,
+                glassEnabled = forceUnselectedColor,
+                indicatorProgress = motionProgress,
+                indicatorBackdropEnabled = true
+            )
             val textColor = if (!enabled) {
                 unselectedTextColor.copy(alpha = 0.44f)
-            } else if (forceUnselectedColor) {
-                // Match bottom-bar glass path: visible content stays neutral while sliding.
-                unselectedTextColor
             } else {
-                androidx.compose.ui.graphics.lerp(
-                    start = unselectedTextColor,
-                    stop = selectedTextColor,
-                    fraction = visual.themeWeight
-                )
+                contentColors.visibleColor
             }
             val labelScale = if (applyItemScale) visual.scale else 1f
             Box(
