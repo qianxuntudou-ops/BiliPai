@@ -8,7 +8,6 @@ import android.content.ContextWrapper
 import android.net.Uri
 import android.os.SystemClock
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.tween
@@ -864,16 +863,10 @@ fun AppNavigation(
                 sourceMetadata = navigation3SourceMetadata
             )
         }
-        val predictiveBackEnabled = appNavigationSettings.predictiveBackEnabled
+        val predictiveBackEnabled = true
         val shouldInterceptTabBack = backGestureDecision.interceptSystemBack
-        val shouldUseClassicBackHandler = !predictiveBackEnabled &&
-            systemBackAction != AppSystemBackAction.FINISH_ACTIVITY
-        val predictiveBackAnimationStyle = remember(appNavigationSettings.predictiveBackAnimationStyle) {
-            BiliPaiPredictiveBackAnimationStyle.fromStorageValue(
-                appNavigationSettings.predictiveBackAnimationStyle
-            )
-        }
-        val predictiveBackExitDirection = appNavigationSettings.predictiveBackExitDirection
+        val predictiveBackAnimationStyle = BiliPaiPredictiveBackAnimationStyle.DEFAULT
+        val predictiveBackExitDirection = "auto"
         val activeBottomTabRoute = resolveActiveBottomTabRoute(
             currentKey = currentNavigation3Key,
             currentBottomItem = currentBottomNavItem
@@ -2886,19 +2879,15 @@ fun AppNavigation(
                 }
             }
 
-            if (predictiveBackEnabled) {
-                MainHostTabBackHandler(
-                    enabled = shouldInterceptTabBack,
-                    onReturnToHomeTab = {
-                        val homeIndex = visibleBottomBarItems.indexOf(BottomNavItem.HOME)
-                        if (homeIndex >= 0) {
-                            mainBottomPagerState.snapToPage(homeIndex)
-                        }
-                    },
-                )
-            } else if (shouldUseClassicBackHandler) {
-                BackHandler { performSystemBackAction() }
-            }
+            MainHostTabBackHandler(
+                enabled = shouldInterceptTabBack,
+                onReturnToHomeTab = {
+                    val homeIndex = visibleBottomBarItems.indexOf(BottomNavItem.HOME)
+                    if (homeIndex >= 0) {
+                        mainBottomPagerState.snapToPage(homeIndex)
+                    }
+                },
+            )
 
             if (showLaunchDisclaimer) {
                 ReleaseChannelDisclaimerDialog(

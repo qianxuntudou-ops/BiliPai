@@ -334,7 +334,7 @@ dependencies {
     implementation("io.github.alexzhirkevich:cupertino-icons-extended:0.1.0-alpha04")
     
     // --- 3.6 Navigation3 (Compose 自有返回栈与预测性返回迁移层) ---
-    implementation("androidx.navigation3:navigation3-runtime:1.1.3")
+    implementation("androidx.navigation3:navigation3-runtime:1.1.4")
     // navigation3-ui 使用 Miuix fork：在 androidx 同包名下提供 NavDisplayTransitionEffects
     // (blockInputDuringTransition / enableCornerClip / dimAmount)，与 InstallerX 对齐，
     // 在转场期间屏蔽触摸拦截以消除预测性返回手势冲突。runtime/event 仍用 androidx 1.1.3/1.1.2。

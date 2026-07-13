@@ -242,9 +242,9 @@ class BiliPaiNavEntryProviderPolicyTest {
     }
 
     @Test
-    fun settingsDirectChildFromRootUsesFallbackUntilCategoryRoute() {
+    fun settingsDirectChildFromRootUsesHierarchyTransition() {
         assertEquals(
-            BiliPaiNavRouteTransition.FALLBACK,
+            BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_FORWARD,
             resolveBiliPaiNavEntryForwardRouteTransition(
                 defaultTransition = BiliPaiNavRouteTransition.FALLBACK,
                 fromRoute = ScreenRoutes.Settings.route,
@@ -255,9 +255,9 @@ class BiliPaiNavEntryProviderPolicyTest {
     }
 
     @Test
-    fun settingsInnerPagesFromActiveMainHostUseFallbackUntilCategoryRoute() {
+    fun settingsInnerPagesFromActiveMainHostUseHierarchyTransition() {
         assertEquals(
-            BiliPaiNavRouteTransition.FALLBACK,
+            BiliPaiNavRouteTransition.SETTINGS_IOS_PUSH_FORWARD,
             resolveBiliPaiNavEntryForwardRouteTransition(
                 defaultTransition = BiliPaiNavRouteTransition.FALLBACK,
                 fromRoute = BiliPaiNavKey.MainHost.routeBase,

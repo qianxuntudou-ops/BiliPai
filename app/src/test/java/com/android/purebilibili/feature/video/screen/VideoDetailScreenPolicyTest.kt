@@ -12,6 +12,31 @@ import kotlin.test.assertTrue
 class VideoDetailScreenPolicyTest {
 
     @Test
+    fun localBack_prefersPortraitFullscreenOverLandscapeFullscreen() {
+        assertEquals(
+            VideoDetailLocalBackTarget.EXIT_PORTRAIT_FULLSCREEN,
+            resolveVideoDetailLocalBackTarget(
+                isLandscapeFullscreen = true,
+                isPortraitFullscreen = true,
+            )
+        )
+        assertEquals(
+            VideoDetailLocalBackTarget.EXIT_LANDSCAPE_FULLSCREEN,
+            resolveVideoDetailLocalBackTarget(
+                isLandscapeFullscreen = true,
+                isPortraitFullscreen = false,
+            )
+        )
+        assertEquals(
+            VideoDetailLocalBackTarget.NAVIGATE_BACK,
+            resolveVideoDetailLocalBackTarget(
+                isLandscapeFullscreen = false,
+                isPortraitFullscreen = false,
+            )
+        )
+    }
+
+    @Test
     fun portraitExitPlayerTarget_prefersCurrentInternalBvidOverRouteBvid() {
         val resolved = resolveVideoPlayerSectionTarget(
             routeBvid = "BV_ROUTE",

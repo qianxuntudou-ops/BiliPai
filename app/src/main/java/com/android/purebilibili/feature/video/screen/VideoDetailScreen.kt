@@ -35,6 +35,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleOut
 import androidx.activity.compose.BackHandler
+import androidx.navigationevent.NavigationEventInfo
+import androidx.navigationevent.compose.NavigationBackHandler
+import androidx.navigationevent.compose.rememberNavigationEventState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -2955,15 +2958,23 @@ fun VideoDetailScreen(
         )
     }
 
-    //  拦截系统返回键：如果是全屏模式，则先退出全屏
-    BackHandler(enabled = isFullscreenMode) {
-        toggleFullscreen()
-    }
-
-    // 📱 拦截系统返回键：如果是竖屏全屏模式，则先退出竖屏全屏
-    BackHandler(enabled = isPortraitFullscreen) {
-        isPortraitFullscreen = false
-    }
+    val localBackTarget = resolveVideoDetailLocalBackTarget(
+        isLandscapeFullscreen = isFullscreenMode,
+        isPortraitFullscreen = isPortraitFullscreen,
+    )
+    val localBackEventState = rememberNavigationEventState(NavigationEventInfo.None)
+    NavigationBackHandler(
+        state = localBackEventState,
+        isBackEnabled = localBackTarget != VideoDetailLocalBackTarget.NAVIGATE_BACK,
+        onBackCompleted = { commitTransition: () -> Unit ->
+            when (localBackTarget) {
+                VideoDetailLocalBackTarget.EXIT_PORTRAIT_FULLSCREEN -> isPortraitFullscreen = false
+                VideoDetailLocalBackTarget.EXIT_LANDSCAPE_FULLSCREEN -> toggleFullscreen()
+                VideoDetailLocalBackTarget.NAVIGATE_BACK -> Unit
+            }
+            commitTransition()
+        },
+    )
 
     // 以下 BackHandler 会阻止 Compose Navigation 的返回路由动画，由根导航统一处理。
     // 显式点击返回时由 handleBack 提前标记 returning，系统路径仍由 onDispose 兜底标记。

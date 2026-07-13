@@ -11,7 +11,7 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
+import com.android.purebilibili.core.ui.LocalNavigationBackHandler
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -374,7 +374,7 @@ fun LivePlayerScreen(
     }
     
     // 仅在全屏模式下拦截返回键，竖屏模式下允许系统预测性返回 gesture 工作
-    BackHandler(enabled = isFullscreen) {
+    LocalNavigationBackHandler(enabled = isFullscreen) {
         if (isFullscreen) toggleFullscreen()
     }
 
