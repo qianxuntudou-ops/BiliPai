@@ -139,9 +139,13 @@ internal fun VideoDetailPhoneSuccessContentLayer(
                         val floatingLiquidBottomInputBar = shouldUseFloatingLiquidBottomInputBar(
                             androidNativeLiquidGlassEnabled = homeSettings.androidNativeLiquidGlassEnabled
                         )
-                        // Capture scrolling detail content only; BottomInputBar stays outside
-                        // so drawBackdrop does not self-sample (same contract as tab chrome).
-                        val bottomInputBarBackdrop = rememberLayerBackdrop()
+                        // Keep a stable surface in the capture while comment sorting replaces
+                        // the list; BottomInputBar stays outside so it cannot self-sample.
+                        val bottomInputBarBackdropFallbackColor = MaterialTheme.colorScheme.surface
+                        val bottomInputBarBackdrop = rememberLayerBackdrop(onDraw = {
+                            drawRect(bottomInputBarBackdropFallbackColor)
+                            drawContent()
+                        })
                         val showExternalPlaylistQueueBarOnCurrentTab =
                             shouldShowExternalPlaylistQueueBarOnContentTab(
                                 queueAvailable = shouldShowExternalPlaylistQueueBar,
