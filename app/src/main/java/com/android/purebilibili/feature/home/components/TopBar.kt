@@ -659,14 +659,19 @@ internal fun Modifier.homeTopBottomBarMatchedSurface(
         blurEnabled = isBlurEnabled || isGlassEnabled,
         darkTheme = isDarkTheme
     )
-    // Match floating bottom-bar shell tint exactly (same preset + glass material policy).
-    val containerColor = resolveAndroidNativeFloatingBottomBarContainerColor(
+    // Match dock material, then lighten for top-chrome reuse (over light headers).
+    val baseContainerColor = resolveAndroidNativeFloatingBottomBarContainerColor(
         surfaceColor = MaterialTheme.colorScheme.surfaceContainer,
         tuning = tuning,
         glassEnabled = isGlassEnabled,
         blurEnabled = isBlurEnabled,
         blurIntensity = blurIntensity,
         liquidGlassPreset = liquidGlassPreset
+    )
+    val containerColor = resolveLiquidReuseShellContainerColor(
+        baseColor = baseContainerColor,
+        glassEnabled = isGlassEnabled,
+        chromeContext = LiquidReuseChromeContext.TOP_TAB,
     )
     this.kernelSuMiuixFloatingDockSurface(
         shape = shape,
@@ -1134,7 +1139,18 @@ private fun LightweightHomeTopTabs(
         )
         val useTopTabGlassColorPath = resolveSharedLiquidIndicatorUseGlassColorPath(
             liquidGlassEnabled = shouldUseLiquidGlassIndicator,
-            lensProgress = topTabLensProgress
+            lensProgress = topTabLensProgress,
+            // Idle selected tab must stay theme primary; export refraction only while moving.
+            requireActiveMotion = true,
+            isDragging = topTabDragActive,
+            motionProgress = topTabMotionProgress,
+        )
+        val topTabIdleSurfaceColor = resolveLiquidReuseIndicatorIdleSurfaceColor(
+            darkTheme = isDarkTheme,
+            chromeContext = LiquidReuseChromeContext.TOP_TAB,
+        )
+        val topTabIdleSurfaceMaxAlpha = resolveLiquidReuseIdleSurfaceMaxAlpha(
+            chromeContext = LiquidReuseChromeContext.TOP_TAB,
         )
         val topTabThemeColor = MaterialTheme.colorScheme.primary
         val topTabExportTintColor = resolveAndroidNativeExportTintColor(
@@ -1398,10 +1414,7 @@ private fun LightweightHomeTopTabs(
                             backdrop = backdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabLensProgress,
-                            indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
-                                preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
-                                darkTheme = isDarkTheme
-                            ),
+                            indicatorIdleSurfaceColor = topTabIdleSurfaceColor,
                             glassEnabled = shouldUseLiquidGlassIndicator,
                             indicatorEffectsEnabled = shouldUseLiquidGlassIndicator,
                             motionProgress = topTabMotionProgress,
@@ -1410,7 +1423,8 @@ private fun LightweightHomeTopTabs(
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = null,
                             bottomBarMotionSpec = topTabDragMotionSpec,
-                            isDarkTheme = isDarkTheme
+                            isDarkTheme = isDarkTheme,
+                            idleSurfaceMaxAlpha = topTabIdleSurfaceMaxAlpha,
                         )
                     }
                     if (shouldUseMd3DockBackedCapsule) {
@@ -1427,10 +1441,7 @@ private fun LightweightHomeTopTabs(
                             backdrop = backdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabLensProgress,
-                            indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
-                                preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
-                                darkTheme = isDarkTheme
-                            ),
+                            indicatorIdleSurfaceColor = topTabIdleSurfaceColor,
                             glassEnabled = true,
                             motionProgress = topTabMotionProgress,
                             velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
@@ -1438,7 +1449,8 @@ private fun LightweightHomeTopTabs(
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = null,
                             bottomBarMotionSpec = topTabDragMotionSpec,
-                            isDarkTheme = isDarkTheme
+                            isDarkTheme = isDarkTheme,
+                            idleSurfaceMaxAlpha = topTabIdleSurfaceMaxAlpha,
                         )
                     }
                     if (shouldUseMd3LiquidCapsule) {
@@ -1456,10 +1468,7 @@ private fun LightweightHomeTopTabs(
                             backdrop = backdrop,
                             indicatorLensSpec = topTabIndicatorLensSpec,
                             effectivePressProgress = topTabLensProgress,
-                            indicatorIdleSurfaceColor = resolveBottomBarIdleIndicatorSurfaceColor(
-                                preset = BottomBarLiquidGlassPreset.BILIPAI_TUNED,
-                                darkTheme = isDarkTheme
-                            ),
+                            indicatorIdleSurfaceColor = topTabIdleSurfaceColor,
                             glassEnabled = true,
                             motionProgress = topTabMotionProgress,
                             velocityItemsPerSecond = topTabIndicatorLayerVelocityItemsPerSecond,
@@ -1467,7 +1476,8 @@ private fun LightweightHomeTopTabs(
                             indicatorLayerScaleProgress = topTabIndicatorLayerScaleProgress,
                             indicatorLayerScaleTransform = null,
                             bottomBarMotionSpec = topTabDragMotionSpec,
-                            isDarkTheme = isDarkTheme
+                            isDarkTheme = isDarkTheme,
+                            idleSurfaceMaxAlpha = topTabIdleSurfaceMaxAlpha,
                         )
                     }
                 }

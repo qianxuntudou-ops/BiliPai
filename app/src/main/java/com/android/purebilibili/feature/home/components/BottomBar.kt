@@ -3770,7 +3770,9 @@ internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     bottomBarMotionSpec: com.android.purebilibili.core.ui.motion.BottomBarMotionSpec,
     isDarkTheme: Boolean,
     swapMotionAxes: Boolean = false,
-    indicatorAlignment: Alignment = Alignment.CenterStart
+    indicatorAlignment: Alignment = Alignment.CenterStart,
+    /** Caps idle onDrawSurface overlay so in-content reuse still shows Combined sample. */
+    idleSurfaceMaxAlpha: Float = 1f,
 ) {
     if (!visible) return
     val rawIndicatorLayerTransform = if (indicatorEffectsEnabled) {
@@ -3799,6 +3801,7 @@ internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
     } else {
         backdrop
     }
+    val idleOverlayCap = idleSurfaceMaxAlpha.coerceIn(0f, 1f)
     Box(
         modifier = Modifier
             .alpha(dockContentAlpha)
@@ -3833,7 +3836,8 @@ internal fun BoxScope.KernelSuMiuixBottomBarIndicatorLayer(
                             pillHighlight.copy(alpha = effectivePressProgress)
                         },
                         onDrawSurface = {
-                            val surfaceFade = (1f - effectivePressProgress).coerceIn(0f, 1f)
+                            val surfaceFade =
+                                ((1f - effectivePressProgress) * idleOverlayCap).coerceIn(0f, 1f)
                             if (surfaceFade > 0f) {
                                 drawRect(
                                     color = indicatorIdleSurfaceColor,

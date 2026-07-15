@@ -265,11 +265,74 @@ internal fun resolveSharedLiquidIndicatorLensProgress(
 /**
  * When glass is active and the capsule is moving, visible labels stay neutral and the
  * selected color is carried by the export layer + tint (same as home bottom bar).
+ *
+ * [requireActiveMotion]: for top-tab / in-content reuse, idle selected labels must stay
+ * theme-colored; only hide selected paint while dragging/moving so export refraction wins.
  */
 internal fun resolveSharedLiquidIndicatorUseGlassColorPath(
     liquidGlassEnabled: Boolean,
-    lensProgress: Float
-): Boolean = liquidGlassEnabled && lensProgress > 0.001f
+    lensProgress: Float,
+    requireActiveMotion: Boolean = false,
+    isDragging: Boolean = false,
+    motionProgress: Float = 0f,
+): Boolean {
+    if (!liquidGlassEnabled || lensProgress <= 0.001f) return false
+    if (!requireActiveMotion) return true
+    return isDragging || motionProgress > 0.04f
+}
+
+/** Where liquid glass chrome sits — dock-over-feed vs on-page reuse. */
+internal enum class LiquidReuseChromeContext {
+    FLOATING_DOCK,
+    TOP_TAB,
+    IN_CONTENT_SEGMENTED,
+}
+
+/**
+ * Shell + idle indicator paints for liquid reuse. In-content chrome sits on white pages;
+ * dock-tuned opacities read as solid gray chips there — use lighter overlays.
+ */
+internal fun resolveLiquidReuseShellContainerColor(
+    baseColor: Color,
+    glassEnabled: Boolean,
+    chromeContext: LiquidReuseChromeContext,
+): Color {
+    if (!glassEnabled || chromeContext == LiquidReuseChromeContext.FLOATING_DOCK) {
+        return baseColor
+    }
+    val maxAlpha = when (chromeContext) {
+        LiquidReuseChromeContext.TOP_TAB -> 0.16f
+        LiquidReuseChromeContext.IN_CONTENT_SEGMENTED -> 0.14f
+        LiquidReuseChromeContext.FLOATING_DOCK -> baseColor.alpha
+    }
+    return baseColor.copy(alpha = minOf(baseColor.alpha.coerceAtLeast(0.06f), maxAlpha))
+}
+
+internal fun resolveLiquidReuseIndicatorIdleSurfaceColor(
+    darkTheme: Boolean,
+    chromeContext: LiquidReuseChromeContext,
+): Color {
+    return when (chromeContext) {
+        LiquidReuseChromeContext.FLOATING_DOCK ->
+            resolveAndroidNativeIdleIndicatorSurfaceColor(darkTheme)
+        LiquidReuseChromeContext.TOP_TAB,
+        LiquidReuseChromeContext.IN_CONTENT_SEGMENTED ->
+            if (darkTheme) {
+                Color.White.copy(alpha = 0.06f)
+            } else {
+                Color.Black.copy(alpha = 0.05f)
+            }
+    }
+}
+
+/** Cap for onDrawSurface idle fade (1 = full dock behavior). */
+internal fun resolveLiquidReuseIdleSurfaceMaxAlpha(
+    chromeContext: LiquidReuseChromeContext,
+): Float = when (chromeContext) {
+    LiquidReuseChromeContext.FLOATING_DOCK -> 1f
+    LiquidReuseChromeContext.TOP_TAB -> 0.42f
+    LiquidReuseChromeContext.IN_CONTENT_SEGMENTED -> 0.38f
+}
 
 /** Capture lens strength: full 24dp while interacting, like KernelSu bottom bar capture. */
 internal fun resolveSharedLiquidIndicatorCaptureLensProgress(
@@ -387,7 +450,7 @@ fun BottomBarLiquidSegmentedControl(
         blurEnabled = liquidGlassEnabled,
         darkTheme = isDarkTheme
     )
-    val containerColor = containerColorOverride ?: resolveAndroidNativeFloatingBottomBarContainerColor(
+    val baseContainerColor = containerColorOverride ?: resolveAndroidNativeFloatingBottomBarContainerColor(
         surfaceColor = surfaceColor,
         tuning = androidNativeTuning,
         glassEnabled = liquidGlassEnabled,
@@ -395,6 +458,16 @@ fun BottomBarLiquidSegmentedControl(
         blurIntensity = blurIntensity,
         liquidGlassPreset = homeSettings.bottomBarLiquidGlassPreset
     )
+    // In-content reuse sits on white pages — dock shell alpha reads as solid gray chips.
+    val containerColor = if (containerColorOverride != null) {
+        baseContainerColor
+    } else {
+        resolveLiquidReuseShellContainerColor(
+            baseColor = baseContainerColor,
+            glassEnabled = liquidGlassEnabled,
+            chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
+        )
+    }
     val themeColor = MaterialTheme.colorScheme.primary
     val selectedTextColor = selectedTextColorOverride ?: themeColor
     val unselectedTextColor = unselectedTextColorOverride
@@ -507,7 +580,18 @@ fun BottomBarLiquidSegmentedControl(
         )
         val useGlassColorPath = resolveSharedLiquidIndicatorUseGlassColorPath(
             liquidGlassEnabled = liquidGlassEnabled,
-            lensProgress = lensProgress
+            lensProgress = lensProgress,
+            requireActiveMotion = true,
+            isDragging = dragState.isDragging,
+            motionProgress = motionProgress,
+        )
+        val reuseIdleSurfaceColor = indicatorIdleSurfaceColorOverride
+            ?: resolveLiquidReuseIndicatorIdleSurfaceColor(
+                darkTheme = isDarkTheme,
+                chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
+            )
+        val reuseIdleSurfaceMaxAlpha = resolveLiquidReuseIdleSurfaceMaxAlpha(
+            chromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
         )
         val rawPanelOffsetPx by remember(density, dockWidthPx) {
             derivedStateOf {
@@ -555,11 +639,7 @@ fun BottomBarLiquidSegmentedControl(
         val indicatorLensSpec = resolveBottomBarBackdropPresetIndicatorLens(
             progress = lensProgress
         )
-        val indicatorIdleSurfaceColor = indicatorIdleSurfaceColorOverride
-            ?: resolveBottomBarIdleIndicatorSurfaceColor(
-                preset = homeSettings.bottomBarLiquidGlassPreset,
-                darkTheme = isDarkTheme
-            )
+        val indicatorIdleSurfaceColor = reuseIdleSurfaceColor
         val foregroundAboveIndicator = shouldRenderBottomBarForegroundAboveIndicator(
             homeSettings.bottomBarLiquidGlassPreset
         )
@@ -688,7 +768,8 @@ fun BottomBarLiquidSegmentedControl(
             indicatorLayerScaleProgress = indicatorLayerScaleProgress,
             indicatorLayerScaleTransform = null,
             bottomBarMotionSpec = motionSpec,
-            isDarkTheme = isDarkTheme
+            isDarkTheme = isDarkTheme,
+            idleSurfaceMaxAlpha = reuseIdleSurfaceMaxAlpha,
         )
 
         // 4) Invisible hit / drag layer above everything.
