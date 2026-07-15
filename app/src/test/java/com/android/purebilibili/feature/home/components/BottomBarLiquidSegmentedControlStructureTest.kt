@@ -141,7 +141,7 @@ class BottomBarLiquidSegmentedControlStructureTest {
     }
 
     @Test
-    fun `in-content reuse caps refraction amount inside local sampling bleed`() {
+    fun `in-content reuse disables unsafe indicator refraction outside local backdrop`() {
         val capture = resolveLiquidReuseCaptureLensSpec(
             progress = 1f,
             indicatorHeightDp = 56f,
@@ -163,17 +163,8 @@ class BottomBarLiquidSegmentedControlStructureTest {
             capture.refractionAmountDp,
             absoluteTolerance = 0.001f
         )
-        // Indicator base 10/14 also hits the same in-content distance caps.
-        assertEquals(
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_HEIGHT_DP,
-            indicator.refractionHeightDp,
-            absoluteTolerance = 0.001f
-        )
-        assertEquals(
-            LIQUID_REUSE_IN_CONTENT_MAX_REFRACTION_AMOUNT_DP,
-            indicator.refractionAmountDp,
-            absoluteTolerance = 0.001f
-        )
+        assertEquals(0f, indicator.refractionHeightDp, absoluteTolerance = 0.001f)
+        assertEquals(0f, indicator.refractionAmountDp, absoluteTolerance = 0.001f)
         assertTrue(capture.refractionAmountDp <= LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP)
         assertTrue(indicator.refractionAmountDp <= LIQUID_REUSE_LOCAL_SAMPLING_BLEED_DP)
         assertFalse(shouldDrawLiquidReuseShellLens(LiquidReuseChromeContext.IN_CONTENT_SEGMENTED))

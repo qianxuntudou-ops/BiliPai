@@ -349,6 +349,17 @@ internal fun resolveLiquidReuseIndicatorLensSpec(
     indicatorHeightDp: Float,
     chromeContext: LiquidReuseChromeContext = LiquidReuseChromeContext.IN_CONTENT_SEGMENTED,
 ): BottomBarBackdropPresetLensSpec {
+    // A segmented control only owns a local backdrop. During the shared 88/56 drag
+    // magnification Miuix evaluates the indicator lens after scaling; its vertical
+    // samples can then leave that local RenderNode and are filled with solid black.
+    // Keep the bottom-bar geometry/stretch, but reserve indicator refraction for
+    // surfaces backed by a continuous page/dock capture.
+    if (chromeContext == LiquidReuseChromeContext.IN_CONTENT_SEGMENTED) {
+        return BottomBarBackdropPresetLensSpec(
+            refractionHeightDp = 0f,
+            refractionAmountDp = 0f,
+        )
+    }
     val (maxHeight, maxAmount) = resolveLiquidReuseLensDistanceCaps(chromeContext)
     return resolveLiquidReuseLensSpec(
         baseHeightDp = 10f,
