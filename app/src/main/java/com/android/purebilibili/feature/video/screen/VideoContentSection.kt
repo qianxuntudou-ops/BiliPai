@@ -533,8 +533,8 @@ fun VideoContentSection(
         Box(
             modifier = Modifier
                 .matchParentSize()
-                .background(MaterialTheme.colorScheme.surface)
                 .layerBackdrop(videoContentChromeBackdrop)
+                .background(MaterialTheme.colorScheme.surface)
         )
         // Inline 弹幕设置不是 Dialog，必须在详情内容之后绘制，避免被列表盖住。
         Column(

@@ -176,8 +176,8 @@ internal fun ListenVideoScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(listenVideoBackground)
                 .layerBackdrop(selectionBackdrop)
+                .background(listenVideoBackground)
         )
         BoxWithConstraints(
             modifier = Modifier

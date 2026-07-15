@@ -17,7 +17,10 @@ class ReusableLiquidGlassBackdropStructureTest {
         assertTrue(source.contains("backdropCoversControl = true"))
         assertTrue(source.contains(".background(listenVideoBackground)"))
         assertTrue(source.contains(".layerBackdrop(selectionBackdrop)"))
-        assertTrue(source.indexOf(".layerBackdrop(selectionBackdrop)") < source.indexOf("BottomBarLiquidSegmentedControl("))
+        val backdropIndex = source.indexOf(".layerBackdrop(selectionBackdrop)")
+        val backgroundIndex = source.indexOf(".background(listenVideoBackground)")
+        assertTrue(backdropIndex < backgroundIndex)
+        assertTrue(backgroundIndex < source.indexOf("BottomBarLiquidSegmentedControl("))
     }
 
     @Test
