@@ -44,6 +44,14 @@ class VideoComposerViewModel : ViewModel() {
         _uiState.value = _uiState.value.copy(danmakuDraft = text)
     }
 
+    internal suspend fun notifyCommentSent() {
+        _events.send(VideoComposerEvent.CommentSent)
+    }
+
+    internal suspend fun notifyDanmakuSent() {
+        _events.send(VideoComposerEvent.DanmakuSent)
+    }
+
     override fun onCleared() {
         mentionSearchJob?.cancel()
         super.onCleared()

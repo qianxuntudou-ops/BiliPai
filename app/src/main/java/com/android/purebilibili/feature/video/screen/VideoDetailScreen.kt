@@ -122,6 +122,7 @@ import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoPlaybackUiState
 import com.android.purebilibili.feature.video.viewmodel.VideoComposerViewModel
 import com.android.purebilibili.feature.video.viewmodel.VideoEngagementViewModel
+import com.android.purebilibili.feature.video.viewmodel.VideoEngagementEvent
 import com.android.purebilibili.feature.video.viewmodel.VideoSupplementViewModel
 import com.android.purebilibili.feature.video.viewmodel.toEngagementSeed
 import com.android.purebilibili.feature.video.viewmodel.toSupplementSeed
@@ -1260,7 +1261,21 @@ fun VideoDetailScreen(
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val subjectSnapshot by viewModel.subjectSnapshot.collectAsStateWithLifecycle()
+    val engagementState by engagementViewModel.uiState.collectAsStateWithLifecycle()
     val resumePlaybackSuggestion by viewModel.resumePlaybackSuggestion.collectAsStateWithLifecycle()
+    LaunchedEffect(context) {
+        engagementViewModel.initWithContext(context)
+    }
+    LaunchedEffect(engagementViewModel) {
+        engagementViewModel.events.collect { event ->
+            when (event) {
+                is VideoEngagementEvent.Message -> viewModel.toast(event.text)
+                is VideoEngagementEvent.OpenFollowGroups ->
+                    viewModel.showFollowGroupDialogForUser(event.mid)
+                is VideoEngagementEvent.LoadVideo -> viewModel.loadVideo(event.bvid, autoPlay = true)
+            }
+        }
+    }
     LaunchedEffect(subjectSnapshot, uiState) {
         val subject = subjectSnapshot ?: return@LaunchedEffect
         val ready = uiState as? VideoPlaybackUiState.Success ?: return@LaunchedEffect
@@ -1714,7 +1729,7 @@ fun VideoDetailScreen(
     }
     val openFavoriteFolders: (VideoFavoriteEntryPoint) -> Unit = { entryPoint ->
         when (resolveVideoFavoriteAction(entryPoint)) {
-            VideoFavoriteAction.ToggleFavorite -> viewModel.toggleFavorite()
+            VideoFavoriteAction.ToggleFavorite -> engagementViewModel.toggleFavorite()
         }
     }
 
@@ -3245,7 +3260,7 @@ fun VideoDetailScreen(
                     bvid = videoPlayerSectionTarget.bvid,
                     coverUrl = videoPlayerSectionTarget.entryCoverUrl,
                     //  实验性功能：双击点赞
-                    onDoubleTapLike = { viewModel.toggleLike() },
+                    onDoubleTapLike = { engagementViewModel.toggleLike() },
                     sponsorSegment = sponsorSegment,
                     showSponsorSkipButton = showSponsorSkipButton,
                     onSponsorSkip = { viewModel.skipCurrentSponsorSegment() },
@@ -3317,18 +3332,18 @@ fun VideoDetailScreen(
                     // [新增] 侧边栏抽屉数据与交互
                     relatedVideos = (uiState as? VideoPlaybackUiState.Success)?.related ?: emptyList(),
                     ugcSeason = (uiState as? VideoPlaybackUiState.Success)?.info?.ugc_season,
-                    isFollowed = (uiState as? VideoPlaybackUiState.Success)?.isFollowing ?: false,
-                    isLiked = (uiState as? VideoPlaybackUiState.Success)?.isLiked ?: false,
-                    isCoined = (uiState as? VideoPlaybackUiState.Success)?.coinCount?.let { it > 0 } ?: false,
-                    isFavorited = (uiState as? VideoPlaybackUiState.Success)?.isFavorited ?: false,
-                    onToggleFollow = { viewModel.toggleFollow() },
-                    onToggleLike = { viewModel.toggleLike() },
+                    isFollowed = engagementState.isFollowing,
+                    isLiked = engagementState.isLiked,
+                    isCoined = engagementState.coinCount > 0,
+                    isFavorited = engagementState.isFavorited,
+                    onToggleFollow = { engagementViewModel.toggleFollow() },
+                    onToggleLike = { engagementViewModel.toggleLike() },
                     onDislike = { viewModel.markVideoNotInterested() },
-                    onCoin = { viewModel.showCoinDialog() },
+                    onCoin = { engagementViewModel.openCoinDialog() },
                     onToggleFavorite = {
                         openFavoriteFolders(VideoFavoriteEntryPoint.FullscreenOverlay)
                     },
-                    onTriple = { viewModel.doTripleAction() },
+                    onTriple = { engagementViewModel.doTripleAction() },
                     onRelatedVideoClick = navigateToRelatedVideo,
                     onPageSelect = { viewModel.switchPage(it) },
                     hasFavoritePlaylist = isExternalPlaylist &&
@@ -4235,15 +4250,15 @@ fun VideoDetailScreen(
         )
 
         //  [新增] 投币对话框
-        val coinDialogVisible by viewModel.coinDialogVisible.collectAsStateWithLifecycle()
-        val currentCoinCount = (uiState as? VideoPlaybackUiState.Success)?.coinCount ?: 0
+        val coinDialogVisible = engagementState.coinDialogVisible
+        val currentCoinCount = engagementState.coinCount
         val userBalance by viewModel.userCoinBalance.collectAsStateWithLifecycle()
         CoinDialog(
             visible = coinDialogVisible,
             currentCoinCount = currentCoinCount,
             userBalance = userBalance,
-            onDismiss = { viewModel.closeCoinDialog() },
-            onConfirm = { count, alsoLike -> viewModel.doCoin(count, alsoLike) }
+            onDismiss = { engagementViewModel.setCoinDialogVisible(false) },
+            onConfirm = engagementViewModel::doCoin
         )
 
         VideoDetailFollowGroupDialog(viewModel = viewModel)
@@ -4703,7 +4718,7 @@ fun VideoDetailScreen(
         }
 
         // 🎉 点赞成功爆裂动画
-        val likeBurstVisible by viewModel.likeBurstVisible.collectAsStateWithLifecycle()
+        val likeBurstVisible = engagementState.likeBurstVisible
         if (likeBurstVisible) {
             Box(
                 modifier = Modifier
@@ -4716,13 +4731,13 @@ fun VideoDetailScreen(
                 LikeBurstAnimation(
                     visible = true,
                     reducedMotion = isReducedActionMotion,
-                    onAnimationEnd = { viewModel.dismissLikeBurst() }
+                    onAnimationEnd = { engagementViewModel.dismissLikeBurst() }
                 )
             }
         }
 
         // 🎉 三连成功庆祝动画
-        val tripleCelebrationVisible by viewModel.tripleCelebrationVisible.collectAsStateWithLifecycle()
+        val tripleCelebrationVisible = engagementState.tripleCelebrationVisible
         val tripleCelebrationPlacement = resolveTripleCelebrationPlacement(
             isFullscreen = isFullscreenMode,
             isLandscape = isLandscape
@@ -4739,7 +4754,7 @@ fun VideoDetailScreen(
                     visible = true,
                     isCompact = false,
                     reducedMotion = isReducedActionMotion,
-                    onAnimationEnd = { viewModel.dismissTripleCelebration() }
+                    onAnimationEnd = { engagementViewModel.dismissTripleCelebration() }
                 )
             }
         }

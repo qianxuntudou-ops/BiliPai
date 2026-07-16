@@ -1,11 +1,34 @@
 package com.android.purebilibili.feature.video.viewmodel
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class VideoDomainViewModelTest {
+    private val dispatcher = StandardTestDispatcher()
+
+    @Before
+    fun setUp() {
+        Dispatchers.setMain(dispatcher)
+    }
+
+    @After
+    fun tearDown() {
+        Dispatchers.resetMain()
+    }
 
     @Test
     fun `engagement keeps transient state for same generation and resets for next video`() {
@@ -45,6 +68,53 @@ class VideoDomainViewModelTest {
 
         assertEquals(subject, viewModel.uiState.value.subject)
         assertEquals("2", viewModel.uiState.value.onlineCount)
+    }
+
+    @Test
+    fun `supplement discards deferred result after generation changes`() = runTest(dispatcher) {
+        val viewModel = VideoSupplementViewModel(
+            loader = VideoSupplementLoader { snapshot ->
+                VideoSupplementSeed(onlineCount = snapshot.bvid)
+            },
+            startDelayMs = 100L
+        )
+        viewModel.bindSubject(subject("BV1", generation = 1L), VideoSupplementSeed())
+        viewModel.bindSubject(subject("BV2", generation = 2L), VideoSupplementSeed())
+
+        advanceTimeBy(100L)
+        runCurrent()
+
+        assertEquals("BV2", viewModel.uiState.value.onlineCount)
+        assertEquals(2L, viewModel.uiState.value.subject?.generation)
+    }
+
+    @Test
+    fun `supplement cancels deferred task while page is invisible`() = runTest(dispatcher) {
+        var loads = 0
+        val viewModel = VideoSupplementViewModel(
+            loader = VideoSupplementLoader {
+                loads += 1
+                VideoSupplementSeed(onlineCount = "loaded")
+            },
+            startDelayMs = 100L
+        )
+        viewModel.bindSubject(subject("BV1", generation = 1L), VideoSupplementSeed())
+        viewModel.setVisible(false)
+
+        advanceTimeBy(100L)
+        runCurrent()
+
+        assertEquals(0, loads)
+        assertEquals("", viewModel.uiState.value.onlineCount)
+    }
+
+    @Test
+    fun `composer buffered event survives a temporary collector stop`() = runTest(dispatcher) {
+        val viewModel = VideoComposerViewModel()
+
+        viewModel.notifyCommentSent()
+
+        assertEquals(VideoComposerEvent.CommentSent, viewModel.events.first())
     }
 
     private fun subject(bvid: String, generation: Long) = VideoSubjectSnapshot(

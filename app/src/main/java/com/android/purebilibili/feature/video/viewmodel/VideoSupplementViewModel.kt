@@ -1,10 +1,13 @@
 package com.android.purebilibili.feature.video.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.android.purebilibili.data.model.response.AiSummaryData
 import com.android.purebilibili.data.model.response.VideoTag
 import com.android.purebilibili.feature.video.note.VideoNoteUiState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -28,7 +31,16 @@ data class VideoSupplementUiState(
     val ownerVideoCount: Int? = null
 )
 
-class VideoSupplementViewModel : ViewModel() {
+fun interface VideoSupplementLoader {
+    suspend fun load(subject: VideoSubjectSnapshot): VideoSupplementSeed
+}
+
+private val EmptyVideoSupplementLoader = VideoSupplementLoader { VideoSupplementSeed() }
+
+class VideoSupplementViewModel(
+    private val loader: VideoSupplementLoader = EmptyVideoSupplementLoader,
+    private val startDelayMs: Long = 300L
+) : ViewModel() {
     private val _uiState = MutableStateFlow(VideoSupplementUiState())
     val uiState = _uiState.asStateFlow()
     private var subjectJob: Job? = null
@@ -49,6 +61,7 @@ class VideoSupplementViewModel : ViewModel() {
             ownerFollowerCount = seed.ownerFollowerCount,
             ownerVideoCount = seed.ownerVideoCount
         )
+        startDeferredLoad(subject)
     }
 
     fun sync(seed: VideoSupplementSeed) {
@@ -67,6 +80,20 @@ class VideoSupplementViewModel : ViewModel() {
         if (_uiState.value.visible == visible) return
         _uiState.value = _uiState.value.copy(visible = visible)
         if (!visible) subjectJob?.cancel()
+        else _uiState.value.subject?.let(::startDeferredLoad)
+    }
+
+    private fun startDeferredLoad(subject: VideoSubjectSnapshot) {
+        if (!_uiState.value.visible) return
+        subjectJob?.cancel()
+        subjectJob = viewModelScope.launch {
+            delay(startDelayMs)
+            val loaded = loader.load(subject)
+            val current = _uiState.value
+            if (current.visible && current.subject?.generation == subject.generation) {
+                sync(loaded)
+            }
+        }
     }
 
     override fun onCleared() {
