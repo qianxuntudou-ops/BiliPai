@@ -60,11 +60,12 @@ internal fun shouldEnableVideoCardCoverCrossfade(
  *
  * 隐藏时机（仅这些）：
  * - OPENING：冻结 record 前藏封面，减「冻结清晰封面 + overlay」重影
- * - 预测返回跟手：详情仍是 live 全屏，藏列表封面
  *
- * 提交返回（isReturningFromDetail / RETURNING）：**不藏**列表封面。
- * 详情侧会立刻叠 handoff 封面；列表封面同时可见可避免「整段收回只有黑底，落位才出图」。
- * 返回目标已关 Coil crossfade，落位不二次淡入。
+ * 预测返回跟手时不藏列表封面：Nav 返回预览已经露出来源页，
+ * 而详情侧封面可能尚未进入 shared overlay，此时隐藏会直接露出 surfaceVariant 占位色。
+ *
+ * 提交返回后，shared overlay 已有详情壳封面承载收回，源封面才让位；
+ * morph 落位后立即恢复，且返回目标已关 Coil crossfade，不会二次淡入。
  */
 internal fun shouldHideHomeCardCoverDuringShellMorph(
     useCardContainerSharedBounds: Boolean,
@@ -77,6 +78,10 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
     if (!useCardContainerSharedBounds || !isSharedMorphSourceCard) {
         return false
     }
+    // 返回预览优先保证来源页完整；也覆盖 OPENING 被手势打断的情况。
+    if (isVideoCardReturnGestureInProgress) {
+        return false
+    }
     // 返回 morph 由详情壳内的常驻封面承载；源卡封面等落位后再接手，避免两层封面叠绘。
     if (isReturningFromDetail &&
         (isSharedTransitionActive ||
@@ -85,9 +90,6 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
         return true
     }
     if (transitionBackgroundPhase == VideoCardTransitionBackgroundPhase.OPENING) {
-        return true
-    }
-    if (isVideoCardReturnGestureInProgress) {
         return true
     }
     // 进场 shared 尚未标 OPENING 的短窗口

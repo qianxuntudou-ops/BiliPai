@@ -261,14 +261,25 @@ class VideoCardScrollLiteVisualPolicyTest {
                 isVideoCardReturnGestureInProgress = false,
             )
         )
-        // 预测跟手（未 mark 返回 session）：藏列表封面
-        assertTrue(
+        // 预测跟手（未 mark 返回 session）：来源页封面承担返回预览，不能露出占位色。
+        assertFalse(
             shouldHideHomeCardCoverDuringShellMorph(
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
                 isReturningFromDetail = false,
                 isSharedTransitionActive = false,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.HELD,
+                isVideoCardReturnGestureInProgress = true,
+            )
+        )
+        // OPENING 被预测返回打断时同样优先显示封面。
+        assertFalse(
+            shouldHideHomeCardCoverDuringShellMorph(
+                useCardContainerSharedBounds = true,
+                isSharedMorphSourceCard = true,
+                isReturningFromDetail = false,
+                isSharedTransitionActive = true,
+                transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING,
                 isVideoCardReturnGestureInProgress = true,
             )
         )
