@@ -620,7 +620,6 @@ fun ElegantVideoCard(
             useCardContainerSharedBounds = useCardShellSharedBounds,
             isSharedMorphSourceCard = isCoverSharedReturnTarget,
             isReturningFromDetail = isReturningFromVideoDetail,
-            isSharedTransitionActive = sharedTransitionScope?.isTransitionActive == true,
             transitionBackgroundPhase = videoCardTransitionBackgroundState.phaseProvider(),
             isVideoCardReturnGestureInProgress = videoCardTransitionBackgroundState.isReturnGestureInProgressProvider(),
         )

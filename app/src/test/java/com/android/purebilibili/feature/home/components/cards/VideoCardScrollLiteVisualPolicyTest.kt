@@ -235,7 +235,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
                 isReturningFromDetail = false,
-                isSharedTransitionActive = false,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING,
                 isVideoCardReturnGestureInProgress = false,
             )
@@ -246,8 +245,17 @@ class VideoCardScrollLiteVisualPolicyTest {
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
                 isReturningFromDetail = true,
-                isSharedTransitionActive = true,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.RETURNING,
+                isVideoCardReturnGestureInProgress = false,
+            )
+        )
+        // 返回 session 可能比 Compose shared transition 早一帧清理；此时仍必须让目标封面接手。
+        assertFalse(
+            shouldHideHomeCardCoverDuringShellMorph(
+                useCardContainerSharedBounds = true,
+                isSharedMorphSourceCard = true,
+                isReturningFromDetail = false,
+                transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE,
                 isVideoCardReturnGestureInProgress = false,
             )
         )
@@ -257,7 +265,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
                 isReturningFromDetail = true,
-                isSharedTransitionActive = false,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.IDLE,
                 isVideoCardReturnGestureInProgress = false,
             )
@@ -268,7 +275,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
                 isReturningFromDetail = false,
-                isSharedTransitionActive = false,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.HELD,
                 isVideoCardReturnGestureInProgress = true,
             )
@@ -279,7 +285,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = true,
                 isReturningFromDetail = false,
-                isSharedTransitionActive = true,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING,
                 isVideoCardReturnGestureInProgress = true,
             )
@@ -290,7 +295,6 @@ class VideoCardScrollLiteVisualPolicyTest {
                 useCardContainerSharedBounds = true,
                 isSharedMorphSourceCard = false,
                 isReturningFromDetail = false,
-                isSharedTransitionActive = true,
                 transitionBackgroundPhase = VideoCardTransitionBackgroundPhase.OPENING,
                 isVideoCardReturnGestureInProgress = false,
             )

@@ -68,7 +68,6 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
     useCardContainerSharedBounds: Boolean,
     isSharedMorphSourceCard: Boolean,
     isReturningFromDetail: Boolean,
-    isSharedTransitionActive: Boolean,
     transitionBackgroundPhase: VideoCardTransitionBackgroundPhase,
     isVideoCardReturnGestureInProgress: Boolean,
 ): Boolean {
@@ -83,12 +82,6 @@ internal fun shouldHideHomeCardCoverDuringShellMorph(
         return false
     }
     if (transitionBackgroundPhase == VideoCardTransitionBackgroundPhase.OPENING) {
-        return true
-    }
-    // 进场 shared 尚未标 OPENING 的短窗口
-    if (isSharedTransitionActive &&
-        transitionBackgroundPhase != VideoCardTransitionBackgroundPhase.RETURNING
-    ) {
         return true
     }
     return false
