@@ -211,7 +211,7 @@ class LoginViewModel(application: Application) : AndroidViewModel(application) {
     private var currentCountryCode: Int = 86
     private val appLoginDeviceId = UUID.randomUUID().toString().replace("-", "").uppercase()
     private val appLoginBuvid = TokenManager.buvid3Cache
-        ?: "${appLoginDeviceId.lowercase()}infoc"
+        ?: "${appLoginDeviceId.lowercase()}infoc".also { TokenManager.buvid3Cache = it }
     
     /**
      * 获取极验验证参数
