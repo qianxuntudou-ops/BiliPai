@@ -127,6 +127,21 @@ class VideoDetailScreenMethodSizeStructureTest {
         assertTrue(holder.contains("VideoDetailDownloadOverlayAdapter("))
     }
 
+    @Test
+    fun portraitPagerOverlayLivesInItsAdapterWithOriginalMotionSpec() {
+        val holder = loadSource("VideoDetailScreenStateHolder.kt")
+        val adapter = loadSource("VideoDetailPortraitOverlayAdapter.kt")
+
+        assertTrue(adapter.lineSequence().count() <= 350)
+        assertTrue(adapter.contains("PortraitVideoPager("))
+        assertTrue(adapter.contains("motionSpec.enterDurationMillis"))
+        assertTrue(adapter.contains("motionSpec.exitDurationMillis"))
+        assertTrue(adapter.contains("motionSpec.exitScaleTarget"))
+        assertTrue(adapter.contains("motionSpec.exitTranslateUpFraction"))
+        assertFalse(holder.contains("PortraitVideoPager("))
+        assertTrue(holder.contains("VideoDetailPortraitOverlayAdapter("))
+    }
+
     private fun loadSource(name: String): String {
         val candidates = listOf(
             File("src/main/java/com/android/purebilibili/feature/video/screen/$name"),

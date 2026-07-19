@@ -3031,184 +3031,108 @@ internal fun VideoDetailScreenStateHolder(
 
     @Composable
     fun BoxScope.VideoDetailRouteSheetOverlayContent() {
-        // 📱 [新增] 竖屏全屏覆盖层
-        // [修复] 在 Loading 状态时也保持竖屏全屏，使用上一个成功状态的数据
-        // [修复] 移除 !isLandscape 限制，允许用户强制进入（例如在平板或特殊设备上）
-        val showPortraitFullscreen = shouldShowStandalonePortraitPager(
+        VideoDetailPortraitOverlayAdapter(
+            uiState = uiState,
             portraitExperienceEnabled = portraitExperienceEnabled,
             isPortraitFullscreen = isPortraitFullscreen,
             useOfficialInlinePortraitDetailExperience = useOfficialInlinePortraitDetailExperience,
-            hasPlayableState = uiState is VideoPlaybackUiState.Success || uiState is VideoPlaybackUiState.Loading
-        )
-
-        // 缓存上一个成功状态以在 Loading 时使用
-        var cachedSuccess by remember { mutableStateOf<VideoPlaybackUiState.Success?>(null) }
-        LaunchedEffect(uiState) {
-            if (uiState is VideoPlaybackUiState.Success) {
-                cachedSuccess = uiState as VideoPlaybackUiState.Success
-            }
-        }
-
-
-
-        // 获取当前或缓存的成功状态
-        val success = when {
-            uiState is VideoPlaybackUiState.Success -> uiState as VideoPlaybackUiState.Success
-            uiState is VideoPlaybackUiState.Loading && cachedSuccess != null -> cachedSuccess!!
-            else -> null
-        }
-
-        val isLoadingNewVideo = uiState is VideoPlaybackUiState.Loading
-
-        // Diagnostic Log
-        LaunchedEffect(isPortraitFullscreen, showPortraitFullscreen, success) {
-            com.android.purebilibili.core.util.Logger.d("VideoDetailScreen",
-                "Portrait Mode Check: requested=$isPortraitFullscreen, shown=$showPortraitFullscreen, " +
-                "success=${success != null}, isLandscape=$isLandscape")
-        }
-
-        AnimatedVisibility(
-            visible = showPortraitFullscreen && success != null,
-            enter = if (shouldAnimatePortraitPager) {
-                fadeIn(
-                    animationSpec = tween(portraitPagerMotionSpec.enterDurationMillis, easing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedEnter)
-                )
-            } else {
-                androidx.compose.animation.EnterTransition.None
+            isLandscape = isLandscape,
+            shouldAnimatePortraitPager = shouldAnimatePortraitPager,
+            motionSpec = portraitPagerMotionSpec,
+            initialBvidOverride = pendingMainReloadBvidAfterPortrait,
+            initialStartPositionMs = portraitSyncSnapshotPositionMs,
+            playbackViewModel = viewModel,
+            engagementViewModel = engagementViewModel,
+            sharedPlayer = if (useSharedPortraitPlayer) playerState.player else null,
+            onBack = { presentationState.setPortraitFullscreen(false) },
+            onHomeClick = {
+                presentationState.setPortraitFullscreen(false)
+                handleTopBarAction(resolveVideoDetailTopBarAction(isHomeButton = true))
             },
-            exit = if (shouldAnimatePortraitPager) {
-                val exitEasing = com.android.purebilibili.core.ui.motion.AppMotionEasing.EmphasizedExit
-                val exitSpec = tween<Float>(
-                    durationMillis = portraitPagerMotionSpec.exitDurationMillis,
-                    easing = exitEasing
-                )
-                fadeOut(
-                    animationSpec = exitSpec
-                ) + scaleOut(
-                    targetScale = portraitPagerMotionSpec.exitScaleTarget,
-                    animationSpec = exitSpec,
-                    transformOrigin = TransformOrigin(0.5f, 0f)
-                ) + slideOutVertically(
-                    animationSpec = tween(
-                        durationMillis = portraitPagerMotionSpec.exitDurationMillis,
-                        easing = exitEasing
-                    ),
-                    targetOffsetY = {
-                        -(it * portraitPagerMotionSpec.exitTranslateUpFraction).roundToInt()
+            onVideoChange = { portraitPendingSelectionBvid = it },
+            onProgressUpdate = { updatedBvid, positionMs, updatedCid ->
+                portraitPendingSelectionBvid = updatedBvid
+                portraitSyncSnapshotBvid = updatedBvid
+                portraitSyncSnapshotCid = updatedCid
+                portraitSyncSnapshotPositionMs = positionMs.coerceAtLeast(0L)
+                if (shouldMirrorPortraitProgressToMainPlayer) {
+                    hasPendingPortraitSync = true
+                    if (tryApplyPortraitProgressSync(updatedBvid, portraitSyncSnapshotPositionMs)) {
+                        hasPendingPortraitSync = false
                     }
-                )
-            } else {
-                androidx.compose.animation.ExitTransition.None
+                }
             },
-            modifier = Modifier.fillMaxSize()
-        ) {
-            if (success != null) {
-                val portraitInitialBvid = pendingMainReloadBvidAfterPortrait ?: success.info.bvid
-                // 竖屏全屏模式：使用 Pager 实现无缝滑动 (TikTok Style)
-                com.android.purebilibili.feature.video.ui.pager.PortraitVideoPager(
-                    initialBvid = portraitInitialBvid,
-                    initialInfo = success.info,
-                    recommendations = success.related,
-                    onBack = { presentationState.setPortraitFullscreen(false) },
-                    onHomeClick = {
-                        presentationState.setPortraitFullscreen(false)
-                        handleTopBarAction(resolveVideoDetailTopBarAction(isHomeButton = true))
-                    },
-                    onVideoChange = { newBvid ->
-                        // 高频滑动期间不重载主播放器，避免与竖屏播放器抢焦点导致暂停。
-                        // 仅记录竖屏会话内当前浏览目标，真正退出时再提交给主播放器。
-                        portraitPendingSelectionBvid = newBvid
-                    },
-                    viewModel = viewModel,
-                    engagementViewModel = engagementViewModel,
-                    sharedPlayer = if (useSharedPortraitPlayer) playerState.player else null,
-                    // [新增] 进度同步
-                    initialStartPositionMs = portraitSyncSnapshotPositionMs,
-                    onProgressUpdate = { bvid, pos, cidSnapshot ->
-                        portraitPendingSelectionBvid = bvid
-                        portraitSyncSnapshotBvid = bvid
-                        portraitSyncSnapshotCid = cidSnapshot
-                        portraitSyncSnapshotPositionMs = pos.coerceAtLeast(0L)
-                        if (shouldMirrorPortraitProgressToMainPlayer) {
-                            hasPendingPortraitSync = true
-                            if (tryApplyPortraitProgressSync(bvid, portraitSyncSnapshotPositionMs)) {
-                                hasPendingPortraitSync = false
-                            }
-                        }
-                    },
-                    onExitSnapshot = { bvid, pos, cidSnapshot ->
-                        presentationState.switchVideo(bvid, cidSnapshot)
-                        portraitPendingSelectionBvid = bvid
-                        portraitSyncSnapshotBvid = bvid
-                        portraitSyncSnapshotCid = cidSnapshot
-                        portraitSyncSnapshotPositionMs = pos.coerceAtLeast(0L)
-                        pendingMainReloadBvidAfterPortrait = bvid
-                        if (shouldMirrorPortraitProgressToMainPlayer) {
-                            hasPendingPortraitSync = true
-                            if (tryApplyPortraitProgressSync(bvid, portraitSyncSnapshotPositionMs)) {
-                                hasPendingPortraitSync = false
-                            }
-                        }
-                    },
-                    onSearchClick = {
-                        hasDeferredPortraitRestoreAfterExternalNavigation =
-                            com.android.purebilibili.feature.video.ui.pager
-                                .shouldDeferPortraitRestoreUntilForegroundResume(
-                                    isPortraitFullscreen = isPortraitFullscreen,
-                                    isExternalNavigation = true
-                                )
-                        if (com.android.purebilibili.feature.video.ui.pager
-                                .shouldExitPortraitForExternalNavigation(isPortraitFullscreen)
-                        ) {
-                            presentationState.setPortraitFullscreen(false)
-                        }
-                        navigateToSearchFromVideo()
-                    },
-                    onUserClick = { mid ->
-                        val anchorBvid = portraitPendingSelectionBvid
-                            ?: pendingMainReloadBvidAfterPortrait
-                            ?: portraitSyncSnapshotBvid
-                            ?: (uiState as? VideoPlaybackUiState.Success)?.info?.bvid
-                        if (!anchorBvid.isNullOrBlank()) {
-                            val anchorCid = if (anchorBvid == portraitSyncSnapshotBvid) {
-                                portraitSyncSnapshotCid
-                            } else {
-                                0L
-                            }
-                            presentationState.switchVideo(anchorBvid, anchorCid)
-                            pendingMainReloadBvidAfterPortrait = anchorBvid
-                        }
-                        hasDeferredPortraitRestoreAfterExternalNavigation =
-                            com.android.purebilibili.feature.video.ui.pager
-                                .shouldDeferPortraitRestoreUntilForegroundResume(
-                                    isPortraitFullscreen = isPortraitFullscreen,
-                                    isExternalNavigation = true
-                                )
-                        if (com.android.purebilibili.feature.video.ui.pager
-                                .shouldExitPortraitForUserSpaceNavigation(isPortraitFullscreen)
-                        ) {
-                            presentationState.setPortraitFullscreen(false)
-                        }
-                        navigateToUserSpaceFromVideo(mid)
-                    },
-                    onRotateToLandscape = {
-                        presentationState.setPortraitFullscreen(false)
-                        val activity = context.findActivity()
-                        val targetOrientation = resolvePortraitRotateTargetOrientation(
-                            isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
-                            manualPortraitHoldActive = manualPortraitHoldActive
+            onExitSnapshot = { updatedBvid, positionMs, updatedCid ->
+                presentationState.switchVideo(updatedBvid, updatedCid)
+                portraitPendingSelectionBvid = updatedBvid
+                portraitSyncSnapshotBvid = updatedBvid
+                portraitSyncSnapshotCid = updatedCid
+                portraitSyncSnapshotPositionMs = positionMs.coerceAtLeast(0L)
+                pendingMainReloadBvidAfterPortrait = updatedBvid
+                if (shouldMirrorPortraitProgressToMainPlayer) {
+                    hasPendingPortraitSync = true
+                    if (tryApplyPortraitProgressSync(updatedBvid, portraitSyncSnapshotPositionMs)) {
+                        hasPendingPortraitSync = false
+                    }
+                }
+            },
+            onSearchClick = {
+                hasDeferredPortraitRestoreAfterExternalNavigation =
+                    com.android.purebilibili.feature.video.ui.pager
+                        .shouldDeferPortraitRestoreUntilForegroundResume(
+                            isPortraitFullscreen = isPortraitFullscreen,
+                            isExternalNavigation = true,
                         )
-                        if (activity != null && targetOrientation != null) {
-                            userRequestedFullscreen = true
-                            manualPortraitHoldActive = false
-                            activity.requestedOrientation = targetOrientation
-                        } else {
-                            toggleFullscreen()
-                        }
+                if (com.android.purebilibili.feature.video.ui.pager
+                        .shouldExitPortraitForExternalNavigation(isPortraitFullscreen)
+                ) {
+                    presentationState.setPortraitFullscreen(false)
+                }
+                navigateToSearchFromVideo()
+            },
+            onUserClick = { mid ->
+                val anchorBvid = portraitPendingSelectionBvid
+                    ?: pendingMainReloadBvidAfterPortrait
+                    ?: portraitSyncSnapshotBvid
+                    ?: (uiState as? VideoPlaybackUiState.Success)?.info?.bvid
+                if (!anchorBvid.isNullOrBlank()) {
+                    val anchorCid = if (anchorBvid == portraitSyncSnapshotBvid) {
+                        portraitSyncSnapshotCid
+                    } else {
+                        0L
                     }
+                    presentationState.switchVideo(anchorBvid, anchorCid)
+                    pendingMainReloadBvidAfterPortrait = anchorBvid
+                }
+                hasDeferredPortraitRestoreAfterExternalNavigation =
+                    com.android.purebilibili.feature.video.ui.pager
+                        .shouldDeferPortraitRestoreUntilForegroundResume(
+                            isPortraitFullscreen = isPortraitFullscreen,
+                            isExternalNavigation = true,
+                        )
+                if (com.android.purebilibili.feature.video.ui.pager
+                        .shouldExitPortraitForUserSpaceNavigation(isPortraitFullscreen)
+                ) {
+                    presentationState.setPortraitFullscreen(false)
+                }
+                navigateToUserSpaceFromVideo(mid)
+            },
+            onRotateToLandscape = {
+                presentationState.setPortraitFullscreen(false)
+                val hostActivity = context.findActivity()
+                val targetOrientation = resolvePortraitRotateTargetOrientation(
+                    isOrientationDrivenFullscreen = isOrientationDrivenFullscreen,
+                    manualPortraitHoldActive = manualPortraitHoldActive,
                 )
-            }
-        }
+                if (hostActivity != null && targetOrientation != null) {
+                    userRequestedFullscreen = true
+                    manualPortraitHoldActive = false
+                    hostActivity.requestedOrientation = targetOrientation
+                } else {
+                    toggleFullscreen()
+                }
+            },
+        )
 
         InteractiveChoiceOverlay(
             state = interactiveChoicePanel,
