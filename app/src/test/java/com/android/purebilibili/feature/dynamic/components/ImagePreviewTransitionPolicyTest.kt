@@ -56,14 +56,26 @@ class ImagePreviewTransitionPolicyTest {
     }
 
     @Test
-    fun resolveImagePreviewTransitionFrame_keepsCornerRadiusConstantDuringTransition() {
-        val frame = resolveImagePreviewTransitionFrame(
+    fun resolveImagePreviewTransitionFrame_interpolatesCornerRadiusTowardSourceOnReturn() {
+        val open = resolveImagePreviewTransitionFrame(
+            rawProgress = 1f,
+            hasSourceRect = true,
+            sourceCornerRadiusDp = 12f
+        )
+        val middle = resolveImagePreviewTransitionFrame(
             rawProgress = 0.5f,
             hasSourceRect = true,
             sourceCornerRadiusDp = 12f
         )
+        val closed = resolveImagePreviewTransitionFrame(
+            rawProgress = 0f,
+            hasSourceRect = true,
+            sourceCornerRadiusDp = 12f
+        )
 
-        assertEquals(12f, frame.cornerRadiusDp)
+        assertEquals(0f, open.cornerRadiusDp, 0.0001f)
+        assertEquals(6f, middle.cornerRadiusDp, 0.0001f)
+        assertEquals(12f, closed.cornerRadiusDp, 0.0001f)
     }
 
     @Test
@@ -219,6 +231,33 @@ class ImagePreviewTransitionPolicyTest {
         assertEquals(source.top, frame.rect.top, 0.0001f)
         assertEquals(source.right, frame.rect.right, 0.0001f)
         assertEquals(source.bottom, frame.rect.bottom, 0.0001f)
+        assertEquals(source.width, frame.rect.width, 0.0001f)
+        assertEquals(source.height, frame.rect.height, 0.0001f)
+    }
+
+    @Test
+    fun resolveImagePreviewDismissRectFrame_keepsSourceSizeDuringOvershoot() {
+        val displayed = Rect(
+            left = 0f,
+            top = 0f,
+            right = 1080f,
+            bottom = 2400f
+        )
+        val source = Rect(
+            left = 100f,
+            top = 400f,
+            right = 420f,
+            bottom = 720f
+        )
+
+        val overshoot = resolveImagePreviewDismissRectFrame(
+            transitionProgress = -0.06f,
+            sourceRect = source,
+            displayedImageRect = displayed
+        ) ?: error("Expected overshoot frame")
+
+        assertEquals(source.width, overshoot.rect.width, 0.0001f)
+        assertEquals(source.height, overshoot.rect.height, 0.0001f)
     }
 
     @Test

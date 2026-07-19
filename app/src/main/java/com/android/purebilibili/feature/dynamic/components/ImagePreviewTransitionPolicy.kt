@@ -115,11 +115,12 @@ internal fun resolveImagePreviewTransitionFrame(
 ): ImagePreviewTransitionFrame {
     val layoutProgress = rawProgress.coerceIn(LAYOUT_PROGRESS_MIN, LAYOUT_PROGRESS_MAX)
     val visualProgress = rawProgress.coerceIn(0f, 1f)
-    val cornerRadiusDp = if (hasSourceRect) {
-        sourceCornerRadiusDp.coerceAtLeast(0f)
-    } else {
-        0f
-    }
+    val cornerRadiusDp = resolveImagePreviewPresentedCornerRadiusDp(
+        visualProgress = visualProgress,
+        verticalDragProgress = 0f,
+        hasSourceRect = hasSourceRect,
+        sourceCornerRadiusDp = sourceCornerRadiusDp
+    )
     val fallbackScale = lerpFloat(FALLBACK_START_SCALE, 1f, visualProgress)
     return ImagePreviewTransitionFrame(
         layoutProgress = layoutProgress,
@@ -127,6 +128,24 @@ internal fun resolveImagePreviewTransitionFrame(
         cornerRadiusDp = cornerRadiusDp,
         fallbackScale = fallbackScale
     )
+}
+
+/**
+ * 全屏打开时圆角为 0；返回/竖滑退出时插值到缩略图圆角，贴回格子更自然。
+ */
+internal fun resolveImagePreviewPresentedCornerRadiusDp(
+    visualProgress: Float,
+    verticalDragProgress: Float,
+    hasSourceRect: Boolean,
+    sourceCornerRadiusDp: Float,
+    openCornerRadiusDp: Float = 0f
+): Float {
+    if (!hasSourceRect) return openCornerRadiusDp.coerceAtLeast(0f)
+    val source = sourceCornerRadiusDp.coerceAtLeast(0f)
+    val open = openCornerRadiusDp.coerceAtLeast(0f)
+    val morphCorner = lerpFloat(source, open, visualProgress.coerceIn(0f, 1f))
+    val dragCorner = lerpFloat(open, source, verticalDragProgress.coerceIn(0f, 1f))
+    return maxOf(morphCorner, dragCorner)
 }
 
 internal fun resolveImagePreviewVisualFrame(
@@ -207,12 +226,14 @@ internal fun resolveImagePreviewDismissRectFrame(
     if (sourceRect == null || displayedImageRect == null) return null
 
     val dismissFraction = resolveImagePreviewDismissFraction(transitionProgress)
+    // 尺寸只插值到缩略图大小，过冲只作用在位移上，避免落位比预览图更小。
+    val sizeFraction = dismissFraction.coerceIn(0f, 1f)
     val displayedCenterX = (displayedImageRect.left + displayedImageRect.right) / 2f
     val displayedCenterY = (displayedImageRect.top + displayedImageRect.bottom) / 2f
     val sourceCenterX = (sourceRect.left + sourceRect.right) / 2f
     val sourceCenterY = (sourceRect.top + sourceRect.bottom) / 2f
-    val width = lerpFloat(displayedImageRect.width, sourceRect.width, dismissFraction)
-    val height = lerpFloat(displayedImageRect.height, sourceRect.height, dismissFraction)
+    val width = lerpFloat(displayedImageRect.width, sourceRect.width, sizeFraction)
+    val height = lerpFloat(displayedImageRect.height, sourceRect.height, sizeFraction)
     val centerX = lerpFloat(displayedCenterX, sourceCenterX, dismissFraction)
     val centerY = lerpFloat(displayedCenterY, sourceCenterY, dismissFraction)
 
