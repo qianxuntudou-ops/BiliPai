@@ -73,6 +73,7 @@ internal const val DEFAULT_CRASH_TRACKING_ENABLED = true
 internal const val DEFAULT_ANALYTICS_ENABLED = true
 internal const val DEFAULT_QUALITY_SWITCH_FAILURE_DIALOG_ENABLED = true
 internal const val DEFAULT_QUALITY_SWITCH_FAILURE_DIALOG_ONCE_ENABLED = false
+internal const val DEFAULT_DASH_SEGMENT_REQUESTS_ENABLED = false
 
 internal fun resolveDefaultPlayerDiagnosticLoggingEnabled(isDebugBuild: Boolean): Boolean {
     return !isDebugBuild
@@ -5655,7 +5656,8 @@ object SettingsManager {
 
     fun getDashSegmentRequestsEnabled(context: Context): Flow<Boolean> =
         context.settingsDataStore.data.map { preferences ->
-            preferences[KEY_DASH_SEGMENT_REQUESTS_ENABLED] ?: true
+            preferences[KEY_DASH_SEGMENT_REQUESTS_ENABLED]
+                ?: DEFAULT_DASH_SEGMENT_REQUESTS_ENABLED
         }
 
     suspend fun setDashSegmentRequestsEnabled(context: Context, enabled: Boolean) {
